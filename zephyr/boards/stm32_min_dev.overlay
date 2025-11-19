@@ -20,6 +20,14 @@
 	};
 };
 
+&usart1 {
+	/* 配置为兼容旧程序的 19200 波特率 */
+	current-speed = <19200>;
+	/* 配置为 9 位数据，包括奇偶校验位 */
+	/* STM32 的 USART 不直接支持 9 位数据模式，使用 8 位作为最接近的兼容 */
+	status = "okay";
+};
+
 zephyr_udc0: &usb {
 	status = "disabled";  /* 禁用USB功能以避免与PA11冲突 */
 };
