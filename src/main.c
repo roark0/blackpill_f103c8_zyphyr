@@ -74,7 +74,7 @@ int main(void)
         led1_state = !led1_state;
         
         printk("LED0 toggled, state: %s | LED1 toggled, state: %s\n", 
-               led0_state ? "ON" : "OFF", led1_state ? "ON" : "OFF");
+               led0_state ? "ON1" : "OFF", led1_state ? "ON" : "OFF");
         
         k_msleep(SLEEP_TIME_MS);
     }
