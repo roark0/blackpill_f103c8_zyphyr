@@ -1,0 +1,10 @@
+/ {
+	model = "STM32 Minimum Development Board (Black)";
+	compatible = "stm32_min_dev_black", "st,stm32f103c8";
+
+	leds {
+		led: led {
+			gpios = <&gpioa 11 GPIO_ACTIVE_LOW>;
+		};
+	};
+};
