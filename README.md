@@ -71,4 +71,24 @@ A5 PB12
 A6 PB13
 
 
+1904C键盘按键：
+| 按键 | 通码(Make Code) | 断码(Break Code) |
+|------|----------------|-----------------|
+| 电源 | E5             | F0 ED           |
+| RINSE| D5             | F0 DD           |
+| PRINT| B5             | F0 BD           |
+| PAPER| 75             | F0 7D           |
+| LAMP | E6             | F0 EE           |
+| LEFT | D6             | F0 DE           |
+| RIGHT| B6             | F0 BE           |
+| ENTER| 76             | F0 7E           |
+
+| 吸液 | E3             | F0 E3           |
+
+行2 吸液
+行1 关机ED 清洗DD 打印BD 进纸7D
+行0 灯泡EE 左键DE 右键BE 确认7E
+
+
+
 
