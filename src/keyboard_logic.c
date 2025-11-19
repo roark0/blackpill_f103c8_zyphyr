@@ -101,8 +101,8 @@ void Keyboard_Scan_And_Transmit(void)
 {
     if (Scankey1904C())
     {
-        // 使用单次传输发送4字节序列: F0 FF [Key1904c] FF
-        char buffer[4] = {0xF0, 0xFF, Key1904c, 0xFF};
-        uart_send_hex(buffer, 4);
+        // 使用单次传输发送4字节序列: F0 [Key1904c]
+        char buffer[2] = {0xF0,  Key1904c};
+        uart_send_hex(buffer, 2);
     }
 }

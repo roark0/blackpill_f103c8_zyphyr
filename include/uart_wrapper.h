@@ -30,15 +30,4 @@ void uart_send_hex(const char *buf, int len);
  */
 void uart_send_string(const char* str);
 
-/**
- * @brief 兼容旧程序的串口初始化函数
- */
-void Serial_Init(void);
-
-/**
- * @brief 兼容旧程序的发送单个字符函数
- * @param ch 要发送的字符 (uint8_t)
- */
-void SendChar(uint8_t ch);
-
 #endif /* UART_WRAPPER_H */
