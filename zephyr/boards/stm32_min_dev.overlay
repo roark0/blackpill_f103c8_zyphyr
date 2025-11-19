@@ -1,10 +1,20 @@
 / {
-	model = "STM32 Minimum Development Board (Black)";
-	compatible = "stm32_min_dev_black", "st,stm32f103c8";
+	model = "BlackPill F103C8";
+	compatible = "st,stm32f103c8";
 
 	leds {
-		led: led {
-			gpios = <&gpioa 11 GPIO_ACTIVE_LOW>;
+		compatible = "gpio-leds";
+		led0: led_0 {
+			gpios = <&gpioa 11 GPIO_ACTIVE_HIGH>;
+			label = "Green LED";
 		};
 	};
+
+	aliases {
+		led0 = &led0;
+	};
+};
+
+zephyr_udc0: &usb {
+	status = "disabled";  /* 禁用USB功能以避免与PA11冲突 */
 };
