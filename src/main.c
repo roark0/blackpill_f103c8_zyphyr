@@ -1,7 +1,9 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/uart.h>
 #include <zephyr/sys/printk.h>
+#include <string.h>
 
 #define LED0_NODE DT_ALIAS(led0)
 #define LED1_NODE DT_ALIAS(led1)
@@ -9,7 +11,23 @@
 static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
 
-#define SLEEP_TIME_MS 1000
+#define UART_DEVICE_DT_NAME DT_CHOSEN(zephyr_console)
+static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_DT_NAME);
+
+#define SLEEP_TIME_MS 500
+
+/*
+ * Print a null-terminated string character by character to the UART interface
+ */
+void print_uart(const char *buf)
+{
+    int msg_len = strlen(buf);
+
+    for (int i = 0; i < msg_len; i++)
+    {
+        uart_poll_out(uart_dev, buf[i]);
+    }
+}
 
 int main(void)
 {
@@ -53,7 +71,7 @@ int main(void)
 
     printk("GPIO pins configured successfully\n");
 
-    // 闪烁两个LED的循环
+    // 闪烁两个LED的循环，并每500ms通过UART发送"hello world"
     while (1)
     {
         ret = gpio_pin_toggle_dt(&led0);
@@ -72,10 +90,11 @@ int main(void)
 
         led0_state = !led0_state;
         led1_state = !led1_state;
-        
-        printk("LED0 toggled, state: %s | LED1 toggled, state: %s\n", 
-               led0_state ? "ON1" : "OFF", led1_state ? "ON" : "OFF");
-        
+
+        printk("LED0 toggled, state: %s | LED1 toggled, state: %s\n", led0_state ? "ON1" : "OFF", led1_state ? "ON" : "OFF");
+
+        print_uart("hello world\r\n");
+
         k_msleep(SLEEP_TIME_MS);
     }
 
