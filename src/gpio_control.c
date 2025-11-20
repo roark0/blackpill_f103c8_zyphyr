@@ -7,7 +7,9 @@
 #include <stm32f1xx_hal.h>
 
 /* 定义键盘行和列的GPIO引脚 (直接使用GPIO端口和引脚号) */
-static const struct device *kb_port = DEVICE_DT_GET(DT_NODELABEL(gpiob));  // GPIOB for all keyboard pins
+static const struct device *kb_row_port = DEVICE_DT_GET(DT_NODELABEL(gpiob));  // GPIOB for keyboard row pins (PB8-PB13)
+static const struct device *kb_col_port = DEVICE_DT_GET(DT_NODELABEL(gpioa));  // GPIOA for keyboard column pins (PA0-PA7)
+static const struct device *capslock_port = DEVICE_DT_GET(DT_NODELABEL(gpioc));  // GPIOC for CAPSLOCK pin (PC15)
 
 /* LED 引脚定义 */
 static struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
@@ -27,69 +29,47 @@ void GPIO_Control_Init(void)
     __HAL_AFIO_REMAP_SWJ_NOJTAG();  // 只禁用JTAG，保留SWD
 
     // 检查GPIO设备是否就绪
-    if (!device_is_ready(kb_port))
+    if (!device_is_ready(kb_row_port))
     {
         printk("Keyboard GPIOB device not ready\n");
         return;
     }
-
-    // 初始化键盘行控制引脚 (输出) - PB4-PB7 (KSCON0-KSCON3)
-    ret = gpio_pin_configure(kb_port, 4, GPIO_OUTPUT_HIGH);
-    if (ret < 0)
+    
+    if (!device_is_ready(kb_col_port))
     {
-        printk("Failed to configure KSCON0 (PB4) GPIO pin (err %d)\n", ret);
+        printk("Keyboard GPIOA device not ready\n");
+        return;
+    }
+    
+    if (!device_is_ready(capslock_port))
+    {
+        printk("CAPSLOCK GPIOC device not ready\n");
         return;
     }
 
-    ret = gpio_pin_configure(kb_port, 5, GPIO_OUTPUT_HIGH);
-    if (ret < 0)
+
+    // 初始化键盘行控制引脚 (输出) - PB8-PB13
+    for (int i = 8; i <= 13; i++)
     {
-        printk("Failed to configure KSCON1 (PB5) GPIO pin (err %d)\n", ret);
-        return;
+        ret = gpio_pin_configure(kb_row_port, i, GPIO_OUTPUT_HIGH);
+        if (ret < 0)
+        {
+            printk("Failed to configure Row %d (PB%d) GPIO pin (err %d)\n", i-8, i, ret);
+            return;
+        }
     }
 
-    ret = gpio_pin_configure(kb_port, 6, GPIO_OUTPUT_HIGH);
-    if (ret < 0)
+    // 初始化键盘列读取引脚 (输入) - PA0-PA7
+    for (int i = 0; i <= 7; i++)
     {
-        printk("Failed to configure KSCON2 (PB6) GPIO pin (err %d)\n", ret);
-        return;
+        ret = gpio_pin_configure(kb_col_port, i, GPIO_INPUT);
+        if (ret < 0)
+        {
+            printk("Failed to configure Col %d (PA%d) GPIO pin (err %d)\n", i, i, ret);
+            return;
+        }
     }
 
-    ret = gpio_pin_configure(kb_port, 7, GPIO_OUTPUT_HIGH);
-    if (ret < 0)
-    {
-        printk("Failed to configure KSCON3 (PB7) GPIO pin (err %d)\n", ret);
-        return;
-    }
-
-    // 初始化键盘列读取引脚 (输入) - PB0-PB3 (KSNS0-KSNS3)
-    ret = gpio_pin_configure(kb_port, 0, GPIO_INPUT);
-    if (ret < 0)
-    {
-        printk("Failed to configure KSNS0 (PB0) GPIO pin (err %d)\n", ret);
-        return;
-    }
-
-    ret = gpio_pin_configure(kb_port, 1, GPIO_INPUT);
-    if (ret < 0)
-    {
-        printk("Failed to configure KSNS1 (PB1) GPIO pin (err %d)\n", ret);
-        return;
-    }
-
-    ret = gpio_pin_configure(kb_port, 2, GPIO_INPUT);
-    if (ret < 0)
-    {
-        printk("Failed to configure KSNS2 (PB2) GPIO pin (err %d)\n", ret);
-        return;
-    }
-
-    ret = gpio_pin_configure(kb_port, 3, GPIO_INPUT);
-    if (ret < 0)
-    {
-        printk("Failed to configure KSNS3 (PB3) GPIO pin (err %d)\n", ret);
-        return;
-    }
 
     // 初始化LED引脚
     if (!device_is_ready(led1.port))
@@ -116,35 +96,41 @@ void GPIO_Control_Init(void)
         return;
     }
 
+    // 初始化CAPSLOCK引脚
+    if (!device_is_ready(capslock_port))
+    {
+        printk("CAPSLOCK GPIO device not ready\n");
+        return;
+    }
+    ret = gpio_pin_configure(capslock_port, 15, GPIO_OUTPUT_ACTIVE);
+    if (ret < 0)
+    {
+        printk("Failed to configure CAPSLOCK GPIO pin (err %d)\n", ret);
+        return;
+    }
+
     printk("GPIO control module initialized successfully\n");
 }
 
 /**
- * @brief 设置键盘控制列的状态
- * @param row_pattern: 行模式 (位0-3对应KSCON0-KSCON3)
+ * @brief 设置键盘行的状态
+ * @param row_pattern: 行模式 (位0-5对应PB8-PB13)
  * @retval None
  */
 void GPIO_SetKeyRows(uint8_t row_pattern)
 {
-    gpio_pin_set(kb_port, 4, (row_pattern & 0x01) ? 1 : 0);  // KSCON0 - PB4
-    gpio_pin_set(kb_port, 5, (row_pattern & 0x02) ? 1 : 0);  // KSCON1 - PB5
-    gpio_pin_set(kb_port, 6, (row_pattern & 0x04) ? 1 : 0);  // KSCON2 - PB6
-    gpio_pin_set(kb_port, 7, (row_pattern & 0x08) ? 1 : 0);  // KSCON3 - PB7
+    gpio_pin_set(kb_row_port, 8, (row_pattern & 0x01) ? 1 : 0);  // Row 0 - PB8
+    gpio_pin_set(kb_row_port, 9, (row_pattern & 0x02) ? 1 : 0);  // Row 1 - PB9
+    gpio_pin_set(kb_row_port, 10, (row_pattern & 0x04) ? 1 : 0);  // Row 2 - PB10
+    gpio_pin_set(kb_row_port, 11, (row_pattern & 0x08) ? 1 : 0);  // Row 3 - PB11
+    gpio_pin_set(kb_row_port, 12, (row_pattern & 0x10) ? 1 : 0);  // Row 4 - PB12
+    gpio_pin_set(kb_row_port, 13, (row_pattern & 0x20) ? 1 : 0);  // Row 5 - PB13
 }
 
-/**
- * @brief 设置行输出
- * @param value: 输出值
- * @retval None
- */
-void Set_Row_Output(uint8_t value)
-{
-    GPIO_SetKeyRows(value);
-}
 
 /**
- * @brief 设置单个键盘控制列的状态
- * @param row: 列号 (0-3对应KSCON0-KSCON3)
+ * @brief 设置单个键盘行的状态
+ * @param row: 行号 (0-5对应PB8-PB13)
  * @param state: 状态 (0=低电平, 1=高电平)
  * @retval None
  */
@@ -153,16 +139,22 @@ void GPIO_SetKeyRow(uint8_t row, uint8_t state)
     switch (row)
     {
         case 0:
-            gpio_pin_set(kb_port, 4, state ? 1 : 0);  // KSCON0 - PB4
+            gpio_pin_set(kb_row_port, 8, state ? 1 : 0);  // Row 0 - PB8
             break;
         case 1:
-            gpio_pin_set(kb_port, 5, state ? 1 : 0);  // KSCON1 - PB5
+            gpio_pin_set(kb_row_port, 9, state ? 1 : 0);  // Row 1 - PB9
             break;
         case 2:
-            gpio_pin_set(kb_port, 6, state ? 1 : 0);  // KSCON2 - PB6
+            gpio_pin_set(kb_row_port, 10, state ? 1 : 0);  // Row 2 - PB10
             break;
         case 3:
-            gpio_pin_set(kb_port, 7, state ? 1 : 0);  // KSCON3 - PB7
+            gpio_pin_set(kb_row_port, 11, state ? 1 : 0);  // Row 3 - PB11
+            break;
+        case 4:
+            gpio_pin_set(kb_row_port, 12, state ? 1 : 0);  // Row 4 - PB12
+            break;
+        case 5:
+            gpio_pin_set(kb_row_port, 13, state ? 1 : 0);  // Row 5 - PB13
             break;
         default:
             break;
@@ -170,38 +162,38 @@ void GPIO_SetKeyRow(uint8_t row, uint8_t state)
 }
 
 /**
- * @brief 读取所有键盘扫描行的状态
- * @retval uint8_t: 行状态 (位0-3对应KSNS0-KSNS3)
+ * @brief 读取所有键盘列的状态
+ * @retval uint8_t: 列状态 (位0-7对应PA0-PA7)
  */
 uint8_t GPIO_ReadKeyCols(void)
 {
     uint8_t col_state = 0;
 
-    if (gpio_pin_get(kb_port, 0) == 0)  // KSNS0 - PB0, 低电平表示按键按下
+    if (gpio_pin_get(kb_col_port, 0) == 0)  // Col 0 - PA0, 低电平表示按键按下
         col_state |= 0x01;
-    if (gpio_pin_get(kb_port, 1) == 0)  // KSNS1 - PB1
+    if (gpio_pin_get(kb_col_port, 1) == 0)  // Col 1 - PA1
         col_state |= 0x02;
-    if (gpio_pin_get(kb_port, 2) == 0)  // KSNS2 - PB2
+    if (gpio_pin_get(kb_col_port, 2) == 0)  // Col 2 - PA2
         col_state |= 0x04;
-    if (gpio_pin_get(kb_port, 3) == 0)  // KSNS3 - PB3
+    if (gpio_pin_get(kb_col_port, 3) == 0)  // Col 3 - PA3
         col_state |= 0x08;
+    if (gpio_pin_get(kb_col_port, 4) == 0)  // Col 4 - PA4
+        col_state |= 0x10;
+    if (gpio_pin_get(kb_col_port, 5) == 0)  // Col 5 - PA5
+        col_state |= 0x20;
+    if (gpio_pin_get(kb_col_port, 6) == 0)  // Col 6 - PA6
+        col_state |= 0x40;
+    if (gpio_pin_get(kb_col_port, 7) == 0)  // Col 7 - PA7
+        col_state |= 0x80;
 
     return col_state;
 }
 
-/**
- * @brief 读取列输入
- * @retval uint8_t: 列状态
- */
-uint8_t Read_Column_Input(void)
-{
-    return GPIO_ReadKeyCols();
-}
 
 /**
- * @brief 读取单个键盘扫描行的状态
- * @param col: 行号 (0-3对应KSNS0-KSNS3)
- * @retval uint8_t: 行状态 (0=高电平, 1=低电平)
+ * @brief 读取单个键盘列的状态
+ * @param col: 列号 (0-7对应PA0-PA7)
+ * @retval uint8_t: 列状态 (0=高电平, 1=低电平)
  */
 uint8_t GPIO_ReadKeyCol(uint8_t col)
 {
@@ -210,16 +202,28 @@ uint8_t GPIO_ReadKeyCol(uint8_t col)
     switch (col)
     {
         case 0:
-            pin_state = gpio_pin_get(kb_port, 0);  // KSNS0 - PB0
+            pin_state = gpio_pin_get(kb_col_port, 0);  // Col 0 - PA0
             break;
         case 1:
-            pin_state = gpio_pin_get(kb_port, 1);  // KSNS1 - PB1
+            pin_state = gpio_pin_get(kb_col_port, 1);  // Col 1 - PA1
             break;
         case 2:
-            pin_state = gpio_pin_get(kb_port, 2);  // KSNS2 - PB2
+            pin_state = gpio_pin_get(kb_col_port, 2);  // Col 2 - PA2
             break;
         case 3:
-            pin_state = gpio_pin_get(kb_port, 3);  // KSNS3 - PB3
+            pin_state = gpio_pin_get(kb_col_port, 3);  // Col 3 - PA3
+            break;
+        case 4:
+            pin_state = gpio_pin_get(kb_col_port, 4);  // Col 4 - PA4
+            break;
+        case 5:
+            pin_state = gpio_pin_get(kb_col_port, 5);  // Col 5 - PA5
+            break;
+        case 6:
+            pin_state = gpio_pin_get(kb_col_port, 6);  // Col 6 - PA6
+            break;
+        case 7:
+            pin_state = gpio_pin_get(kb_col_port, 7);  // Col 7 - PA7
             break;
         default:
             break;
@@ -279,6 +283,39 @@ void GPIO_ToggleLED(uint8_t led_num)
 }
 
 /**
+ * @brief 设置CAPSLOCK LED状态
+ * @param state: 状态 (0=熄灭, 1=点亮)
+ * @retval None
+ */
+void GPIO_SetCapsLock(uint8_t state)
+{
+    gpio_pin_set(capslock_port, 15, state ? 1 : 0);  // PC15
+}
+
+/**
+ * @brief 切换CAPSLOCK LED状态
+ * @retval None
+ */
+void GPIO_ToggleCapsLock(void)
+{
+    int ret = gpio_pin_toggle(capslock_port, 15);  // PC15
+    if (ret < 0)
+    {
+        printk("Failed to toggle CAPSLOCK (err %d)\n", ret);
+    }
+}
+
+/**
+ * @brief 读取CAPSLOCK状态
+ * @retval uint8_t: 状态 (0=高电平, 1=低电平)
+ */
+uint8_t GPIO_ReadCapsLock(void)
+{
+    return gpio_pin_get(capslock_port, 15) ? 1 : 0;  // PC15
+}
+
+
+/**
  * @brief 扫描键盘状态
  * @retval uint16_t: 键盘扫描码
  */
@@ -286,27 +323,27 @@ uint16_t GPIO_ScanKeyboard(void)
 {
     uint16_t key_code = 0;
 
-    // 扫描每一列 (KSCON0-KSCON3)
-    for (uint8_t col = 0; col < 4; col++)
+    // 扫描每一行 (PB8-PB13)
+    for (uint8_t row = 0; row < 6; row++)
     {
-        // 设置当前列为低电平，其余为高电平
-        GPIO_SetKeyRows(~(1 << col));
+        // 设置当前行为低电平，其余为高电平
+        GPIO_SetKeyRows(~(1 << row));
 
         // 短暂延时以稳定信号
         k_msleep(1);
 
-        // 读取行状态 (KSNS0-KSNS3)
-        uint8_t row_state = GPIO_ReadKeyCols();
+        // 读取列状态 (PA0-PA7)
+        uint8_t col_state = GPIO_ReadKeyCols();
 
-        // 如果有按键按下，记录列和行
-        if (row_state != 0x0F)
-        {  // 0x0F表示所有行都是高电平(无按键)
-            for (uint8_t row = 0; row < 4; row++)
+        // 如果有按键按下，记录行和列
+        if (col_state != 0xFF)
+        {  // 0xFF表示所有列都是高电平(无按键)
+            for (uint8_t col = 0; col < 8; col++)
             {
-                if ((row_state & (1 << row)) == 0)
+                if ((col_state & (1 << col)) == 0)
                 {  // 检测到低电平(按键按下)
-                    // 计算键码 (列*4 + 行)
-                    key_code = (col << 8) | row;
+                    // 计算键码 (行*8 + 列)
+                    key_code = (row << 8) | col;
                     break;
                 }
             }
@@ -319,7 +356,7 @@ uint16_t GPIO_ScanKeyboard(void)
         }
     }
 
-    // 恢复所有列为高电平
+    // 恢复所有行为高电平
     GPIO_SetKeyRows(0xFF);
 
     return key_code;

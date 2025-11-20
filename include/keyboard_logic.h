@@ -37,22 +37,14 @@ extern volatile unsigned int gFunc_Buffer;       //function keycode buffer
 extern volatile uint8_t Flag_Updown;             //the flag of function key keeping down or not
 extern volatile uint8_t Flag_Key;                //the flag of any key keeping down or not
 
-extern volatile uint8_t Key1904c;
 extern volatile uint8_t Key9000c;
 
-extern volatile char G_cComRecData;
-
 extern volatile char G_uc9000ScanInterval;
-extern volatile char G_uc1904ScanInterval;
 
-/* 函数声明 */
-void Delay(unsigned int t);
-UINT8 Scankey1904C(void);      //Scan 1904c keyboard function
 UINT8 ScanOthekey9000(void);
 UINT8 Key_Scan(void);
 unsigned int Key_Decode(unsigned int key);
 void Function_Key_Decode(unsigned int Func_Key);
-void Serial_trans(UINT8 Scancode);
 void Keyboard_Scan_And_Transmit(void);
 
 #ifdef __cplusplus
