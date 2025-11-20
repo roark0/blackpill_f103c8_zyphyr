@@ -22,11 +22,6 @@ uint8_t GPIO_ReadKeyCol(uint8_t col);
 void GPIO_SetLED(uint8_t led_num, uint8_t state);
 void GPIO_ToggleLED(uint8_t led_num);
 
-// CAPSLOCK 控制函数
-void GPIO_SetCapsLock(uint8_t state);
-void GPIO_ToggleCapsLock(void);
-uint8_t GPIO_ReadCapsLock(void);
-
 // 键盘扫描函数
 uint16_t GPIO_ScanKeyboard(void);
 

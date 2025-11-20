@@ -24,9 +24,8 @@ static struct gpio_dt_spec specical_key[3] = {GPIO_DT_SPEC_GET(DT_NODELABEL(sw_s
                                               GPIO_DT_SPEC_GET(DT_NODELABEL(sw_flush), gpios)};
 
 /* LED 引脚定义 */
-static struct gpio_dt_spec led1         = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-static struct gpio_dt_spec led2         = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
-static struct gpio_dt_spec led_capslock = GPIO_DT_SPEC_GET(DT_NODELABEL(led_capslock), gpios);
+static struct gpio_dt_spec leds[3]      = {GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios), GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios),
+                                           GPIO_DT_SPEC_GET(DT_NODELABEL(led_capslock), gpios)};
 /**
  * @brief 初始化GPIO控制模块
  * @retval None
@@ -34,11 +33,6 @@ static struct gpio_dt_spec led_capslock = GPIO_DT_SPEC_GET(DT_NODELABEL(led_caps
 void GPIO_Control_Init(void)
 {
     int ret;
-
-    // 对于STM32F103，需要禁用JTAG/SWD功能以允许PB4用作普通GPIO
-    // 通过AFIO的SWJ_CFG位来禁用JTAG功能
-    __HAL_RCC_AFIO_CLK_ENABLE();
-    __HAL_AFIO_REMAP_SWJ_NOJTAG();  // 只禁用JTAG，保留SWD
 
     // 检查GPIO设备是否就绪
     for (int i = 0; i < 6; i++)
@@ -59,10 +53,14 @@ void GPIO_Control_Init(void)
         }
     }
 
-    if (!device_is_ready(led_capslock.port))
+    // 检查LED设备是否就绪
+    for (int i = 0; i < 3; i++)
     {
-        printk("CAPSLOCK GPIOC device not ready\n");
-        return;
+        if (!device_is_ready(leds[i].port))
+        {
+            printk("LED %d GPIO device not ready\n", i);
+            return;
+        }
     }
 
     // 初始化键盘行控制引脚 (输出) - PB8-PB13
@@ -86,7 +84,6 @@ void GPIO_Control_Init(void)
             return;
         }
     }
-
 
     // 初始化特殊按键输出引脚
     for (int i = 0; i < 3; i++)
@@ -121,41 +118,14 @@ void GPIO_Control_Init(void)
     }
 
     // 初始化LED引脚
-    if (!device_is_ready(led1.port))
+    for (int i = 0; i < 3; i++)
     {
-        printk("LED1 GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0)
-    {
-        printk("Failed to configure LED1 GPIO pin (err %d)\n", ret);
-        return;
-    }
-
-    if (!device_is_ready(led2.port))
-    {
-        printk("LED2 GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0)
-    {
-        printk("Failed to configure LED2 GPIO pin (err %d)\n", ret);
-        return;
-    }
-
-    // 初始化CAPSLOCK引脚
-    if (!device_is_ready(led_capslock.port))
-    {
-        printk("CAPSLOCK GPIOC device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&led_capslock, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0)
-    {
-        printk("Failed to configure CAPSLOCK GPIO pin (err %d)\n", ret);
-        return;
+        ret = gpio_pin_configure_dt(&leds[i], GPIO_OUTPUT_ACTIVE);
+        if (ret < 0)
+        {
+            printk("Failed to configure LED %d GPIO pin (err %d)\n", i, ret);
+            return;
+        }
     }
 
     printk("GPIO control module initialized successfully\n");
@@ -168,12 +138,12 @@ void GPIO_Control_Init(void)
  */
 void GPIO_SetKeyRows(uint8_t row_pattern)
 {
-    gpio_pin_set_dt(&kb_rows[0], (row_pattern & 0x01) ? 1 : 0);   // Row 0 - PB8
-    gpio_pin_set_dt(&kb_rows[1], (row_pattern & 0x02) ? 1 : 0);   // Row 1 - PB9
-    gpio_pin_set_dt(&kb_rows[2], (row_pattern & 0x04) ? 1 : 0);   // Row 2 - PB10
-    gpio_pin_set_dt(&kb_rows[3], (row_pattern & 0x08) ? 1 : 0);   // Row 3 - PB11
-    gpio_pin_set_dt(&kb_rows[4], (row_pattern & 0x10) ? 1 : 0);   // Row 4 - PB12
-    gpio_pin_set_dt(&kb_rows[5], (row_pattern & 0x20) ? 1 : 0);   // Row 5 - PB13
+    gpio_pin_set_dt(&kb_rows[0], (row_pattern & 0x01) ? 1 : 0);  // Row 0 - PB8
+    gpio_pin_set_dt(&kb_rows[1], (row_pattern & 0x02) ? 1 : 0);  // Row 1 - PB9
+    gpio_pin_set_dt(&kb_rows[2], (row_pattern & 0x04) ? 1 : 0);  // Row 2 - PB10
+    gpio_pin_set_dt(&kb_rows[3], (row_pattern & 0x08) ? 1 : 0);  // Row 3 - PB11
+    gpio_pin_set_dt(&kb_rows[4], (row_pattern & 0x10) ? 1 : 0);  // Row 4 - PB12
+    gpio_pin_set_dt(&kb_rows[5], (row_pattern & 0x20) ? 1 : 0);  // Row 5 - PB13
 }
 
 /**
@@ -236,85 +206,37 @@ uint8_t GPIO_ReadKeyCol(uint8_t col)
 
 /**
  * @brief 设置LED状态
- * @param led_num: LED编号 (1或2)
+ * @param led_num: LED编号 (0-2对应led0, led1, led_capslock)
  * @param state: 状态 (0=熄灭, 1=点亮)
  * @retval None
  */
 void GPIO_SetLED(uint8_t led_num, uint8_t state)
 {
-    switch (led_num)
+    if (led_num < 3)
     {
-        case 1:
-            gpio_pin_set_dt(&led1, state ? 1 : 0);
-            break;
-        case 2:
-            gpio_pin_set_dt(&led2, state ? 1 : 0);
-            break;
-        default:
-            break;
+        gpio_pin_set_dt(&leds[led_num], state ? 1 : 0);
     }
 }
 
 /**
  * @brief 切换LED状态
- * @param led_num: LED编号 (1或2)
+ * @param led_num: LED编号 (0-2对应led0, led1, led_capslock)
  * @retval None
  */
 void GPIO_ToggleLED(uint8_t led_num)
 {
     int ret;
-    switch (led_num)
+    if (led_num < 3)
     {
-        case 1:
-            ret = gpio_pin_toggle_dt(&led1);
-            if (ret < 0)
-            {
-                printk("Failed to toggle LED1 (err %d)\n", ret);
-            }
-            break;
-        case 2:
-            ret = gpio_pin_toggle_dt(&led2);
-            if (ret < 0)
-            {
-                printk("Failed to toggle LED2 (err %d)\n", ret);
-            }
-            break;
-        default:
-            break;
+        ret = gpio_pin_toggle_dt(&leds[led_num]);
+        if (ret < 0)
+        {
+            printk("Failed to toggle LED %d (err %d)\n", led_num, ret);
+        }
     }
 }
 
-/**
- * @brief 设置CAPSLOCK LED状态
- * @param state: 状态 (0=熄灭, 1=点亮)
- * @retval None
- */
-void GPIO_SetCapsLock(uint8_t state)
-{
-    gpio_pin_set_dt(&led_capslock, state ? 1 : 0);  // PC15
-}
 
-/**
- * @brief 切换CAPSLOCK LED状态
- * @retval None
- */
-void GPIO_ToggleCapsLock(void)
-{
-    int ret = gpio_pin_toggle_dt(&led_capslock);  // PC15
-    if (ret < 0)
-    {
-        printk("Failed to toggle CAPSLOCK (err %d)\n", ret);
-    }
-}
-
-/**
- * @brief 读取CAPSLOCK状态
- * @retval uint8_t: 状态 (0=高电平, 1=低电平)
- */
-uint8_t GPIO_ReadCapsLock(void)
-{
-    return gpio_pin_get_dt(&led_capslock) ? 1 : 0;  // PC15
-}
 
 /**
  * @brief 设置特殊按键输出引脚状态
