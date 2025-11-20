@@ -23,6 +23,9 @@
 // 按键状态数组，用于检测按键状态变化 (6行x8列)
 static uint8_t prev_key_state[6][8] = {0};  // 6行对应PB8-PB13, 8列对应PA0-PA7
 
+// 特殊按键的前一个状态，用于边沿检测
+static uint8_t prev_special_key_state[3] = {0, 0, 0};  // 吸液键、走纸键、冲洗键的前一状态
+
 /* 全局变量声明 */
 volatile unsigned int gKey_Buffer;   //common keycode buffer
 volatile unsigned int gFunc_Buffer;  //function keycode buffer
@@ -530,12 +533,17 @@ UINT8 ScanSpecialKeys(void)
         uint8_t input_idx = (i == 0) ? 0 : 1; // 吸液键使用输入0，走纸/冲洗键使用输入1
         tmp = GPIO_ReadSpecialKeyInput(input_idx);
         
-        if (tmp == 1)  // 如果输入为低电平 (输入函数返回1表示原始GPIO为低，即按键按下)
+        // 检测下降沿：从释放状态变为按下状态（0 -> 1）
+        uint8_t current_state = tmp;
+        uint8_t previous_state = prev_special_key_state[i];
+        
+        // 只有在检测到下降沿时才处理按键按下
+        if (previous_state == 0 && current_state == 1)
         {
             // 确认按键按下（防抖）
             k_msleep(10);
             tmp = GPIO_ReadSpecialKeyInput(input_idx);
-            if (tmp == 1)
+            if (tmp == 1)  // 确认按键仍然按下
             {
                 Key9000c = key_codes[i];  // 设置按键码
                 special_key_pressed = TRUE;
@@ -550,6 +558,9 @@ UINT8 ScanSpecialKeys(void)
                 }
             }
         }
+        
+        // 更新按键状态
+        prev_special_key_state[i] = current_state;
         
         // 恢复当前按键输出引脚到高电平
         GPIO_SetSpecialKeyOutput(i, 1);
