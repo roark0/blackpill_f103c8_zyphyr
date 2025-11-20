@@ -12,6 +12,48 @@
 			gpios = <&gpioa 12 GPIO_ACTIVE_LOW>;
 			label = "Red LED";
 		};
+
+		// 吸液键 (Suction key)
+		suction: suction {
+			gpios = <&gpiob 4 GPIO_ACTIVE_HIGH>;
+			label = "KSCON0 Suction Key Output";
+		};
+
+		// 走纸键 (Paper feed key)
+		paper_feed: paper_feed {
+			gpios = <&gpiob 7 GPIO_ACTIVE_HIGH>;
+			label = "KSCON3 Paper Feed Key Output";
+		};
+
+		// 冲洗键 (Flush key)
+		flush: flush {
+			gpios = <&gpiob 5 GPIO_ACTIVE_HIGH>;
+			label = "KSCON1 Flush Key Output";
+		};
+
+		led_capslock: capslock {
+			gpios = <&gpioc 15 GPIO_ACTIVE_HIGH>;
+			label = "capslock";
+		};
+	};
+
+	gpio_keys
+	{
+		compatible = "gpio-keys";
+		sw_suction: suction {
+			gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
+			label = "KSNS2 Suction Key Input";
+		};
+
+		sw_paper_feed: paper_feed {
+			gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
+			label = "KSNS1 Paper Feed Key Input";
+		};
+
+		sw_flush: flush {
+			gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
+			label = "KSNS1 Flush Key Input";
+		};
 	};
 
 	aliases {

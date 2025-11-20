@@ -6,6 +6,20 @@
 #include <zephyr/kernel.h>
 #include "uart_wrapper.h"
 
+// 吸液键 4E
+// KSCON0 PB4 output 
+// KSNS2 PB2 input
+
+// 走纸键 5D
+// KSCON3 PB7 output
+// KSNS1 PB1 input
+
+// 冲洗键 55
+// KSCON1 PB5 output
+// KSNS1 PB1 input
+
+// 检测原理：以上gpio默认为高电平，依次拉低output,检测对应的input,检测到低电平则按键被按下
+
 // 按键状态数组，用于检测按键状态变化 (6行x8列)
 static uint8_t prev_key_state[6][8] = {0};  // 6行对应PB8-PB13, 8列对应PA0-PA7
 
@@ -22,6 +36,125 @@ volatile char G_uc9000ScanInterval;
 //定义TRUE和FALSE
 #define TRUE 1
 #define FALSE 0
+
+/* 键值转换函数：将行列位置转换为旧版键值 */
+unsigned int convert_key_to_legacy_format(uint8_t row, uint8_t col)
+{
+    // 在旧版keyboard.c中，键值是通过行列扫描状态生成的
+    // 首先需要模拟旧版的扫描过程来生成对应的键值
+
+    // 根据键盘布局分析，我们知道每个按键的行列位置
+    // 现在我们需要从行列位置得到旧版的键值
+
+    // 每个按键位置对应的旧版键值
+    switch ((row << 4) | col)  // 将行列组合成一个值用于switch
+    {
+        case 0x00:
+            return 0xFEFE;  // Shift (0,0)
+        case 0x01:
+            return 0xFDFE;  // Z (0,1)
+        case 0x02:
+            return 0xFBFE;  // X (0,2)
+        case 0x03:
+            return 0xF7FE;  // C (0,3)
+        case 0x04:
+            return 0xEFFE;  // V (0,4)
+        case 0x05:
+            return 0xDFFE;  // B (0,5)
+        case 0x06:
+            return 0xBFFE;  // N (0,6)
+        case 0x07:
+            return 0x7FFE;  // M (0,7)
+
+        case 0x10:
+            return 0xFEFD;  // Capslock (1,0)
+        case 0x11:
+            return 0xFDFD;  // A (1,1)
+        case 0x12:
+            return 0xFBFD;  // S (1,2)
+        case 0x13:
+            return 0xF7FD;  // D (1,3)
+        case 0x14:
+            return 0xEFFD;  // F (1,4)
+        case 0x15:
+            return 0xDFFD;  // G (1,5)
+        case 0x16:
+            return 0xBFFD;  // H (1,6)
+        case 0x17:
+            return 0x7FFD;  // J (1,7)
+
+        case 0x20:
+            return 0xFEFB;  // TAB (2,0)
+        case 0x21:
+            return 0xFDFB;  // Q (2,1)
+        case 0x22:
+            return 0xFBFB;  // W (2,2)
+        case 0x23:
+            return 0xF7FB;  // E (2,3)
+        case 0x24:
+            return 0xEFFB;  // R (2,4)
+        case 0x25:
+            return 0xDFFB;  // T (2,5)
+        case 0x26:
+            return 0xBFFB;  // Y (2,6)
+        case 0x27:
+            return 0x7FFB;  // U (2,7)
+
+        case 0x30:
+            return 0xFEF7;  // 1 (3,0)
+        case 0x31:
+            return 0xFDF7;  // 2 (3,1)
+        case 0x32:
+            return 0xFBF7;  // 3 (3,2)
+        case 0x33:
+            return 0xF7F7;  // 4 (3,3)
+        case 0x34:
+            return 0xEFF7;  // 5 (3,4)
+        case 0x35:
+            return 0xDFF7;  // 6 (3,5)
+        case 0x36:
+            return 0xBFF7;  // 7 (3,6)
+        case 0x37:
+            return 0x7FF7;  // 8 (3,7)
+
+        case 0x40:
+            return 0xFEEF;  // LCtrl (4,0)
+        case 0x41:
+            return 0xFDEF;  // 0 (4,1)
+        case 0x42:
+            return 0xFBEF;  // K (4,2)
+        case 0x43:
+            return 0xF7EF;  // Dot (4,3)
+        case 0x44:
+            return 0xEFEF;  // Space (4,4)
+        case 0x45:
+            return 0xDFEF;  // Enter (4,5)
+        case 0x46:
+            return 0xBFEF;  // I (4,6)
+        case 0x47:
+            return 0x7FEF;  // 9 (4,7)
+
+        case 0x50:          /* 无按键 */
+            return 0xFFFF;  // (5,0)
+        case 0x51:          /* 无按键 */
+            return 0xFFFF;  // (5,1)
+        case 0x52:
+            return 0xFBDF;  // P (5,2)
+        case 0x53:
+            return 0xF7DF;  // L (5,3)
+        case 0x54:          /* 无按键 */
+            return 0xFFFF;  // (5,4)
+        case 0x55:          /* 无按键 */
+            return 0xFFFF;  // (5,5)
+        case 0x56:
+            return 0xBFDF;  // O (5,6)
+        case 0x57:
+            return 0x7FDF;  // Backspace (5,7)
+
+        default:
+            return 0xFFFF;  // 无效键值
+    }
+}
 
 /* 9000键盘扫描函数 */
 UINT8 Key_Scan(void)
@@ -65,14 +198,19 @@ UINT8 Key_Scan(void)
                 if (confirm_state == 1)  // 确认按键仍然按下
                 {
                     // 检测到有效的按键按下事件
-                    // 将行列信息编码为扫描码
-                    gKey_Buffer = ((uint16_t)(1 << col) << 8) | (1 << row);  // 高8位为列信息，低8位为行信息
+                    // 将行列信息编码为扫描码，并转换为旧版键值
+                    unsigned int legacy_key = convert_key_to_legacy_format(row, col);
 
-                    Flag_Key = TRUE;  // 标记有按键按下
+                    if (legacy_key != 0xFFFF)  // 确保是有效的按键
+                    {
+                        gKey_Buffer = legacy_key;
 
-                    key_pressed = TRUE;  // 标记已检测到按键按下事件
+                        Flag_Key = TRUE;  // 标记有按键按下
 
-                    printk("Key_Scan: Key pressed at Row %d, Col %d, gKey_Buffer=0x%04X\n", row, col, gKey_Buffer);
+                        key_pressed = TRUE;  // 标记已检测到按键按下事件
+
+                        printk("Key_Scan: Key pressed at Row %d, Col %d, gKey_Buffer=0x%04X\n", row, col, gKey_Buffer);
+                    }
                 }
             }
 
@@ -103,136 +241,181 @@ UINT8 Key_Scan(void)
 /* 按键解码函数 */
 unsigned int Key_Decode(unsigned int key)
 {
+    printk("Key_Decode: received key=0x%04X\n", key);
     volatile unsigned int iKeyID = 0;
 
     // 扫描码的断码加载在高字节,通码加载在低字节
     switch (key)
     {
+
         case 0xfdef:
             iKeyID = 0xF045;
+            printk("0\n");
             break;  //0
+
         case 0xfef7:
             iKeyID = 0xF016;
+            printk("1\n");
             break;  //1
         case 0xfdf7:
             iKeyID = 0xF01E;
+            printk("2\n");
             break;  //2
         case 0xfbf7:
             iKeyID = 0xF026;
+            printk("3\n");
             break;  //3
         case 0xf7f7:
             iKeyID = 0xF025;
+            printk("4\n");
             break;  //4
         case 0xeff7:
             iKeyID = 0xF02E;
+            printk("5\n");
             break;  //5
         case 0xdff7:
             iKeyID = 0xF036;
+            printk("6\n");
             break;  //6
         case 0xbff7:
             iKeyID = 0xF03D;
+            printk("7\n");
             break;  //7
         case 0x7ff7:
             iKeyID = 0xF03E;
+            printk("8\n");
             break;  //8
         case 0x7fef:
             iKeyID = 0xF046;
+            printk("9\n");
             break;  //9
         case 0xfdfd:
             iKeyID = 0xF01C;
+            printk("A\n");
             break;  //A
         case 0xdffe:
             iKeyID = 0xF032;
+            printk("B\n");
             break;  //B
         case 0xf7fe:
             iKeyID = 0xF021;
+            printk("C\n");
             break;  //C
         case 0xf7fd:
             iKeyID = 0xF023;
+            printk("D\n");
             break;  //D
         case 0xf7fb:
             iKeyID = 0xF024;
+            printk("E\n");
             break;  //E
         case 0xeffd:
             iKeyID = 0xF02B;
+            printk("F\n");
             break;  //F
         case 0xdffd:
             iKeyID = 0xF034;
+            printk("G\n");
             break;  //G
         case 0xbffd:
             iKeyID = 0xF033;
+            printk("H\n");
             break;  //H
         case 0xbfef:
             iKeyID = 0xF043;
+            printk("I\n");
             break;  //I
         case 0x7ffd:
             iKeyID = 0xF03B;
+            printk("J\n");
             break;  //J
         case 0xfbef:
             iKeyID = 0xF042;
+            printk("K\n");
             break;  //K
         case 0xf7df:
             iKeyID = 0xF04B;
+            printk("L\n");
             break;  //L
         case 0x7ffe:
             iKeyID = 0xF03A;
+            printk("M\n");
             break;  //M
         case 0xbffe:
             iKeyID = 0xF031;
+            printk("N\n");
             break;  //N
         case 0xbfdf:
             iKeyID = 0xF044;
+            printk("O\n");
             break;  //O
         case 0xfbdf:
             iKeyID = 0xF04D;
+            printk("P\n");
             break;  //P
         case 0xfdfb:
             iKeyID = 0xF015;
+            printk("Q\n");
             break;  //Q
         case 0xeffb:
             iKeyID = 0xF02D;
+            printk("R\n");
             break;  //R
         case 0xfbfd:
             iKeyID = 0xF01B;
+            printk("S\n");
             break;  //S
         case 0xdffb:
             iKeyID = 0xF02C;
+            printk("T\n");
             break;  //T
         case 0x7ffb:
             iKeyID = 0xF03C;
+            printk("U\n");
             break;  //U
         case 0xeffe:
             iKeyID = 0xF02A;
+            printk("V\n");
             break;  //V
         case 0xfbfb:
             iKeyID = 0xF01D;
+            printk("W\n");
             break;  //W
         case 0xfbfe:
             iKeyID = 0xF022;
+            printk("X\n");
             break;  //X
         case 0xbffb:
             iKeyID = 0xF035;
+            printk("Y\n");
             break;  //Y
         case 0xfdfe:
             iKeyID = 0xF01A;
+            printk("Z\n");
             break;  //Z
         case 0xdfef:
             iKeyID = 0xF05A;
+            printk("enter\n");
             break;  //enter
         case 0xefef:
             iKeyID = 0xF029;
+            printk("space\n");
             break;  //space
         case 0xf7ef:
             iKeyID = 0xF049;
+            printk("dot\n");
             break;  //dot
         case 0x7fdf:
             iKeyID = 0xF066;
+            printk("backspace\n");
             break;  //backspace
         case 0xfefb:
             iKeyID = 0xF00D;
+            printk("TAB\n");
             break;  //TAB
         case 0xfefd:
             iKeyID = 0xF058;
+            printk("capslock\n");
             break;  //capslock LED
         default:
             iKeyID = 0;
@@ -245,11 +428,12 @@ unsigned int Key_Decode(unsigned int key)
 }
 
 /* 功能键解码函数 */
-void Function_Key_Decode(unsigned int Func_Key)  //Func_Key = gKey_Buffer
+void Function_Key_Decode(unsigned int Func_Key)
 {
     switch (Func_Key)
     {
         case 0xFEFE:  //shift
+            printk("shift\n");
             while (1)
             {
                 Key_Scan();
@@ -281,6 +465,7 @@ void Function_Key_Decode(unsigned int Func_Key)  //Func_Key = gKey_Buffer
             }
             break;  //LShift is down
         case 0xFEEF:
+            printk("Ctrl\n");
             while (1)
             {
                 Key_Scan();
@@ -317,62 +502,97 @@ void Function_Key_Decode(unsigned int Func_Key)  //Func_Key = gKey_Buffer
     }
 }
 
+/* 检测特殊按键函数 */
+UINT8 ScanSpecialKeys(void)
+{
+    volatile unsigned char tmp = 0x00;
+    uint8_t special_key_pressed = FALSE;
+    
+    // 检测吸液键 (扫描码 0x4E)
+    // KSCON0 PB4 output, KSNS2 PB2 input
+    // 拉低PB4，检测PB2
+    GPIO_SetSpecialKeyOutput(0, 0); // 0=吸液键, 0=低电平
+    k_msleep(1); // 短暂延时稳定信号
+    tmp = GPIO_ReadSpecialKeyInput(0); // 0=吸液键输入
+    
+    if (tmp == 1)  // 如果PB2为低电平 (输入函数返回1表示原始GPIO为低，即按键按下)
+    {
+        // 确认按键按下（防抖）
+        k_msleep(10);
+        tmp = GPIO_ReadSpecialKeyInput(0);
+        if (tmp == 1)
+        {
+            Key9000c = 0x4E;  // 吸液键
+            special_key_pressed = TRUE;
+            printk("Suction key pressed (0x4E)\n");
+        }
+    }
+    
+    if (!special_key_pressed)
+    {
+        // 恢复吸液键输出到高电平
+        GPIO_SetSpecialKeyOutput(0, 1);
+        
+        // 检测走纸键 (扫描码 0x5D)
+        // KSCON3 PB7 output, KSNS1 PB1 input
+        // 拉低PB7，检测PB1
+        GPIO_SetSpecialKeyOutput(1, 0); // 1=走纸键, 0=低电平
+        k_msleep(1); // 短暂延时稳定信号
+        tmp = GPIO_ReadSpecialKeyInput(1); // 1=走纸键输入 (共用KSNS1)
+        
+        if (tmp == 1)  // 如果PB1为低电平 (输入函数返回1表示原始GPIO为低，即按键按下)
+        {
+            // 确认按键按下（防抖）
+            k_msleep(10);
+            tmp = GPIO_ReadSpecialKeyInput(1);
+            if (tmp == 1)
+            {
+                Key9000c = 0x5D;  // 走纸键
+                special_key_pressed = TRUE;
+                printk("Paper feed key pressed (0x5D)\n");
+            }
+        }
+    }
+    
+    if (!special_key_pressed)
+    {
+        // 恢复走纸键输出到高电平
+        GPIO_SetSpecialKeyOutput(1, 1);
+        
+        // 检测冲洗键 (扫描码 0x55)
+        // KSCON1 PB5 output, KSNS1 PB1 input
+        // 拉低PB5，检测PB1
+        GPIO_SetSpecialKeyOutput(2, 0); // 2=冲洗键, 0=低电平
+        k_msleep(1); // 短暂延时稳定信号
+        tmp = GPIO_ReadSpecialKeyInput(1); // 1=走纸键/冲洗键输入 (共用KSNS1)
+        
+        if (tmp == 1)  // 如果PB1为低电平 (输入函数返回1表示原始GPIO为低，即按键按下)
+        {
+            // 确认按键按下（防抖）
+            k_msleep(10);
+            tmp = GPIO_ReadSpecialKeyInput(1);
+            if (tmp == 1)
+            {
+                Key9000c = 0x55;  // 冲洗键
+                special_key_pressed = TRUE;
+                printk("Flush key pressed (0x55)\n");
+            }
+        }
+    }
+    
+    // 恢复所有输出引脚到高电平
+    GPIO_SetSpecialKeyOutput(0, 1); // 吸液键
+    GPIO_SetSpecialKeyOutput(1, 1); // 走纸键
+    GPIO_SetSpecialKeyOutput(2, 1); // 冲洗键
+    
+    return special_key_pressed;
+}
+
 /* 9000其他按键扫描函数 */
 UINT8 ScanOthekey9000(void)
 {
-    volatile unsigned char tmp = 0x00;
-
-    Key9000c = 0x00;
-
-    GPIO_SetKeyRows(0x06);
-    tmp = GPIO_ReadKeyCols();
-
-    if ((tmp & 0x06) == 0x06)
-    {
-        return FALSE;
-    }
-
-    k_msleep(100);
-    GPIO_SetKeyRows(0x06);
-    tmp = GPIO_ReadKeyCols();
-
-    if ((tmp & 0x06) == 0x06)
-    {
-        return FALSE;
-    }
-    Key9000c = tmp & 0x06;
-
-    GPIO_SetKeyRows(0xB0);
-    tmp = GPIO_ReadKeyCols();
-
-    if ((tmp & 0xB0) == 0xB0)
-    {
-        return FALSE;
-    }
-    Key9000c |= (tmp & 0xB0);
-
-    GPIO_SetKeyRows(0x0F);
-
-    //Convert key value
-    switch (Key9000c)
-    {
-        case 0xA2:
-            tmp = 0x4E;
-            break;
-        case 0x34:
-            tmp = 0x5D;
-            break;
-        case 0x94:
-            tmp = 0x55;
-            break;
-        default:
-            return FALSE;
-            break;
-    }
-
-    Key9000c = tmp;
-
-    return TRUE;
+    // 使用新的特殊按键检测函数
+    return ScanSpecialKeys();
 }
 
 /* 键盘扫描和传输主函数 */
@@ -397,7 +617,7 @@ void Keyboard_Scan_And_Transmit(void)
             }
             else
             {
-                printk("Regular key, sending key codes: 0x%02X 0x%02X\n", (Key >> 8) & 0xff, Key & 0xff);
+                printk("Regular key, sending key codes: 0x%02X%02X\n", (Key >> 8) & 0xff, Key & 0xff);
                 uart_send_char((Key >> 8) & 0xff);
                 uart_send_char(Key & 0xff);
             }
@@ -406,15 +626,13 @@ void Keyboard_Scan_And_Transmit(void)
             uart_send_char(Key & 0xff);
         }
     }
-#if 0 
-    else if (TRUE == ScanOthekey9000())
+    else if (ScanOthekey9000())
     {
-        printk("Other key detected in 9000, sending codes: 0xF0 0x%02X\n", Key9000c);
+        printk("Special key detected, sending codes: 0xF0 0x%02X\n", Key9000c);
         uart_send_char(0xF0);
         uart_send_char(Key9000c);
 
         uart_send_char(0xF0);
         uart_send_char(Key9000c);
     }
-#endif
 }

@@ -70,7 +70,6 @@ int main(void)
             return 0;
         }
         
-        printk("-----------------------------------\n");
         Keyboard_Scan_And_Transmit();
         // GPIO_SetKeyRows(0);
         
