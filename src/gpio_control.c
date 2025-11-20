@@ -4,15 +4,14 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/printk.h>
 
-// #include <stm32f1xx_hal.h>
+#include <stdint.h>
 
 /* 定义键盘行和列的GPIO引脚 (直接使用GPIO端口和引脚号) */
 static const struct device *kb_port = DEVICE_DT_GET(DT_NODELABEL(gpiob));  // GPIOB for all keyboard pins
 
 /* LED 引脚定义 */
-static struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_NODELABEL(led1), gpios);
-static struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_NODELABEL(led2), gpios);
-
+static struct gpio_dt_spec leds[3]      = {GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios), GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios),
+                                           GPIO_DT_SPEC_GET(DT_NODELABEL(led_capslock), gpios)};
 /**
  * @brief 初始化GPIO控制模块
  * @retval None
@@ -90,30 +89,15 @@ void GPIO_Control_Init(void)
         printk("Failed to configure KSNS3 (PB3) GPIO pin (err %d)\n", ret);
         return;
     }
-
     // 初始化LED引脚
-    if (!device_is_ready(led1.port))
+    for (int i = 0; i < 3; i++)
     {
-        printk("LED1 GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0)
-    {
-        printk("Failed to configure LED1 GPIO pin (err %d)\n", ret);
-        return;
-    }
-
-    if (!device_is_ready(led2.port))
-    {
-        printk("LED2 GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0)
-    {
-        printk("Failed to configure LED2 GPIO pin (err %d)\n", ret);
-        return;
+        ret = gpio_pin_configure_dt(&leds[i], GPIO_OUTPUT_ACTIVE);
+        if (ret < 0)
+        {
+            printk("Failed to configure LED %d GPIO pin (err %d)\n", i, ret);
+            return;
+        }
     }
 
     printk("GPIO control module initialized successfully\n");
@@ -236,45 +220,27 @@ uint8_t GPIO_ReadKeyCol(uint8_t col)
  */
 void GPIO_SetLED(uint8_t led_num, uint8_t state)
 {
-    switch (led_num)
+    if (led_num < 3)
     {
-        case 1:
-            gpio_pin_set_dt(&led1, state ? 1 : 0);
-            break;
-        case 2:
-            gpio_pin_set_dt(&led2, state ? 1 : 0);
-            break;
-        default:
-            break;
+        gpio_pin_set_dt(&leds[led_num], state ? 1 : 0);
     }
 }
 
 /**
  * @brief 切换LED状态
- * @param led_num: LED编号 (1或2)
+ * @param led_num: LED编号 (0-2对应led0, led1, led_capslock)
  * @retval None
  */
 void GPIO_ToggleLED(uint8_t led_num)
 {
     int ret;
-    switch (led_num)
+    if (led_num < 3)
     {
-        case 1:
-            ret = gpio_pin_toggle_dt(&led1);
-            if (ret < 0)
-            {
-                printk("Failed to toggle LED1 (err %d)\n", ret);
-            }
-            break;
-        case 2:
-            ret = gpio_pin_toggle_dt(&led2);
-            if (ret < 0)
-            {
-                printk("Failed to toggle LED2 (err %d)\n", ret);
-            }
-            break;
-        default:
-            break;
+        ret = gpio_pin_toggle_dt(&leds[led_num]);
+        if (ret < 0)
+        {
+            printk("Failed to toggle LED %d (err %d)\n", led_num, ret);
+        }
     }
 }
 
