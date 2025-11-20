@@ -12,16 +12,15 @@ static const struct device *kb_col_port = DEVICE_DT_GET(DT_NODELABEL(gpioa));  /
 // static const struct device *capslock_port = DEVICE_DT_GET(DT_NODELABEL(gpioc));  // GPIOC for CAPSLOCK pin (PC15)
 
 /* 定义特殊按键GPIO引脚 (使用设备树定义的节点) */
-static struct gpio_dt_spec suction = GPIO_DT_SPEC_GET(DT_NODELABEL(suction), gpios);
-static struct gpio_dt_spec suction_key_input = GPIO_DT_SPEC_GET(DT_NODELABEL(sw_suction), gpios);
-static struct gpio_dt_spec paper_feed = GPIO_DT_SPEC_GET(DT_NODELABEL(paper_feed), gpios);
-static struct gpio_dt_spec sw_paper_feed = GPIO_DT_SPEC_GET(DT_NODELABEL(sw_paper_feed), gpios);
-static struct gpio_dt_spec flush = GPIO_DT_SPEC_GET(DT_NODELABEL(flush), gpios);
-static struct gpio_dt_spec sw_flush = GPIO_DT_SPEC_GET(DT_NODELABEL(sw_flush), gpios);
+static struct gpio_dt_spec specical_control[3] = {GPIO_DT_SPEC_GET(DT_NODELABEL(suction), gpios), GPIO_DT_SPEC_GET(DT_NODELABEL(paper_feed), gpios),
+                                                  GPIO_DT_SPEC_GET(DT_NODELABEL(flush), gpios)};
+
+static struct gpio_dt_spec specical_key[3] = {GPIO_DT_SPEC_GET(DT_NODELABEL(sw_suction), gpios), GPIO_DT_SPEC_GET(DT_NODELABEL(sw_paper_feed), gpios),
+                                              GPIO_DT_SPEC_GET(DT_NODELABEL(sw_flush), gpios)};
 
 /* LED 引脚定义 */
-static struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-static struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
+static struct gpio_dt_spec led1         = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+static struct gpio_dt_spec led2         = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
 static struct gpio_dt_spec led_capslock = GPIO_DT_SPEC_GET(DT_NODELABEL(led_capslock), gpios);
 /**
  * @brief 初始化GPIO控制模块
@@ -42,26 +41,26 @@ void GPIO_Control_Init(void)
         printk("Keyboard GPIOB device not ready\n");
         return;
     }
-    
+
     if (!device_is_ready(kb_col_port))
     {
         printk("Keyboard GPIOA device not ready\n");
         return;
     }
-    
+
     if (!device_is_ready(led_capslock.port))
     {
         printk("CAPSLOCK GPIOC device not ready\n");
         return;
     }
-    
+
     // 初始化键盘行控制引脚 (输出) - PB8-PB13
     for (int i = 8; i <= 13; i++)
     {
         ret = gpio_pin_configure(kb_row_port, i, GPIO_OUTPUT_HIGH);
         if (ret < 0)
         {
-            printk("Failed to configure Row %d (PB%d) GPIO pin (err %d)\n", i-8, i, ret);
+            printk("Failed to configure Row %d (PB%d) GPIO pin (err %d)\n", i - 8, i, ret);
             return;
         }
     }
@@ -77,81 +76,37 @@ void GPIO_Control_Init(void)
         }
     }
 
-    // 初始化吸液键引脚
-    if (!device_is_ready(suction.port))
+    // 初始化特殊按键输出引脚
+    for (int i = 0; i < 3; i++)
     {
-        printk("Suction key output GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&suction, GPIO_OUTPUT_HIGH);
-    if (ret < 0)
-    {
-        printk("Failed to configure suction key output (err %d)\n", ret);
-        return;
-    }
-    
-    if (!device_is_ready(suction_key_input.port))
-    {
-        printk("Suction key input GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&suction_key_input, GPIO_INPUT);
-    if (ret < 0)
-    {
-        printk("Failed to configure suction key input (err %d)\n", ret);
-        return;
-    }
-    
-    // 初始化走纸键引脚
-    if (!device_is_ready(paper_feed.port))
-    {
-        printk("Paper feed key output GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&paper_feed, GPIO_OUTPUT_HIGH);
-    if (ret < 0)
-    {
-        printk("Failed to configure paper feed key output (err %d)\n", ret);
-        return;
-    }
-    
-    if (!device_is_ready(sw_paper_feed.port))
-    {
-        printk("Paper feed key input GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&sw_paper_feed, GPIO_INPUT);
-    if (ret < 0)
-    {
-        printk("Failed to configure paper feed key input (err %d)\n", ret);
-        return;
-    }
-    
-    // 初始化冲洗键引脚
-    if (!device_is_ready(flush.port))
-    {
-        printk("Flush key output GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&flush, GPIO_OUTPUT_HIGH);
-    if (ret < 0)
-    {
-        printk("Failed to configure flush key output (err %d)\n", ret);
-        return;
-    }
-    
-    if (!device_is_ready(sw_flush.port))
-    {
-        printk("Flush key input GPIO device not ready\n");
-        return;
-    }
-    ret = gpio_pin_configure_dt(&sw_flush, GPIO_INPUT);
-    if (ret < 0)
-    {
-        printk("Failed to configure flush key input (err %d)\n", ret);
-        return;
+        if (!device_is_ready(specical_control[i].port))
+        {
+            printk("Special key output GPIO device %d not ready\n", i);
+            return;
+        }
+        ret = gpio_pin_configure_dt(&specical_control[i], GPIO_OUTPUT_HIGH);
+        if (ret < 0)
+        {
+            printk("Failed to configure special key output %d (err %d)\n", i, ret);
+            return;
+        }
     }
 
+    // 初始化特殊按键输入引脚
+    for (int i = 0; i < 3; i++)
+    {
+        if (!device_is_ready(specical_key[i].port))
+        {
+            printk("Special key input GPIO device %d not ready\n", i);
+            return;
+        }
+        ret = gpio_pin_configure_dt(&specical_key[i], GPIO_INPUT);
+        if (ret < 0)
+        {
+            printk("Failed to configure special key input %d (err %d)\n", i, ret);
+            return;
+        }
+    }
 
     // 初始化LED引脚
     if (!device_is_ready(led1.port))
@@ -201,14 +156,13 @@ void GPIO_Control_Init(void)
  */
 void GPIO_SetKeyRows(uint8_t row_pattern)
 {
-    gpio_pin_set(kb_row_port, 8, (row_pattern & 0x01) ? 1 : 0);  // Row 0 - PB8
-    gpio_pin_set(kb_row_port, 9, (row_pattern & 0x02) ? 1 : 0);  // Row 1 - PB9
+    gpio_pin_set(kb_row_port, 8, (row_pattern & 0x01) ? 1 : 0);   // Row 0 - PB8
+    gpio_pin_set(kb_row_port, 9, (row_pattern & 0x02) ? 1 : 0);   // Row 1 - PB9
     gpio_pin_set(kb_row_port, 10, (row_pattern & 0x04) ? 1 : 0);  // Row 2 - PB10
     gpio_pin_set(kb_row_port, 11, (row_pattern & 0x08) ? 1 : 0);  // Row 3 - PB11
     gpio_pin_set(kb_row_port, 12, (row_pattern & 0x10) ? 1 : 0);  // Row 4 - PB12
     gpio_pin_set(kb_row_port, 13, (row_pattern & 0x20) ? 1 : 0);  // Row 5 - PB13
 }
-
 
 /**
  * @brief 设置单个键盘行的状态
@@ -270,7 +224,6 @@ uint8_t GPIO_ReadKeyCols(void)
 
     return col_state;
 }
-
 
 /**
  * @brief 读取单个键盘列的状态
@@ -371,7 +324,7 @@ void GPIO_ToggleLED(uint8_t led_num)
  */
 void GPIO_SetCapsLock(uint8_t state)
 {
-    gpio_pin_set_dt(&led_capslock,  state ? 1 : 0);  // PC15
+    gpio_pin_set_dt(&led_capslock, state ? 1 : 0);  // PC15
 }
 
 /**
@@ -396,7 +349,6 @@ uint8_t GPIO_ReadCapsLock(void)
     return gpio_pin_get_dt(&led_capslock) ? 1 : 0;  // PC15
 }
 
-
 /**
  * @brief 设置特殊按键输出引脚状态
  * @param key_type: 按键类型 (0=吸液键, 1=走纸键, 2=冲洗键)
@@ -405,58 +357,25 @@ uint8_t GPIO_ReadCapsLock(void)
  */
 void GPIO_SetSpecialKeyOutput(uint8_t key_type, uint8_t state)
 {
-    const struct gpio_dt_spec *output_spec = NULL;
-    
-    switch (key_type)
+    if (key_type < 3 && device_is_ready(specical_control[key_type].port))
     {
-        case 0:  // 吸液键
-            output_spec = &suction;
-            break;
-        case 1:  // 走纸键
-            output_spec = &paper_feed;
-            break;
-        case 2:  // 冲洗键
-            output_spec = &flush;
-            break;
-        default:
-            break;
-    }
-    
-    if (output_spec != NULL && device_is_ready(output_spec->port))
-    {
-        gpio_pin_set_dt(output_spec, state ? 1 : 0);
+        gpio_pin_set_dt(&specical_control[key_type], state ? 1 : 0);
     }
 }
 
 /**
  * @brief 读取特殊按键输入引脚状态
- * @param key_type: 按键类型 (0=吸液键, 1=走纸键/冲洗键)  
+ * @param key_type: 按键类型 (0=吸液键, 1=走纸键, 2=冲洗键)  
  * @retval uint8_t: 引脚状态 (0=高电平, 1=低电平)
  */
 uint8_t GPIO_ReadSpecialKeyInput(uint8_t key_type)
 {
-    const struct gpio_dt_spec *input_spec = NULL;
-    
-    switch (key_type)
+    if (key_type < 3 && device_is_ready(specical_key[key_type].port))
     {
-        case 0:  // 吸液键 (PB2 - KSNS2)
-            input_spec = &suction_key_input;
-            break;
-        case 1:  // 走纸键/冲洗键 (PB1 - KSNS1)
-            // 走纸键和冲洗键共用KSNS1，所以需要根据具体情况选择
-            // 通常在执行走纸键或冲洗键检测时调用
-            input_spec = &sw_paper_feed;  // 或 &sw_flush，共用同一个引脚
-            break;
-        default:
-            break;
-    }
-    
-    if (input_spec != NULL && device_is_ready(input_spec->port))
-    {
-        int pin_state = gpio_pin_get_dt(input_spec);
+        int pin_state = gpio_pin_get_dt(&specical_key[key_type]);
         return (pin_state == 0) ? 1 : 0;  // 0表示低电平(按键按下)，1表示高电平(按键释放)
     }
-    
+
     return 0;  // 默认返回未按下状态
 }
 

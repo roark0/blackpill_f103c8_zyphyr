@@ -508,82 +508,52 @@ UINT8 ScanSpecialKeys(void)
     volatile unsigned char tmp = 0x00;
     uint8_t special_key_pressed = FALSE;
     
-    // 检测吸液键 (扫描码 0x4E)
-    // KSCON0 PB4 output, KSNS2 PB2 input
-    // 拉低PB4，检测PB2
-    GPIO_SetSpecialKeyOutput(0, 0); // 0=吸液键, 0=低电平
-    k_msleep(1); // 短暂延时稳定信号
-    tmp = GPIO_ReadSpecialKeyInput(0); // 0=吸液键输入
+    // 特殊按键的扫描码映射
+    // 0=吸液键 (0x4E), 1=走纸键 (0x5D), 2=冲洗键 (0x55)
+    const uint8_t key_codes[3] = {0x4E, 0x5D, 0x55};
     
-    if (tmp == 1)  // 如果PB2为低电平 (输入函数返回1表示原始GPIO为低，即按键按下)
+    // 检测每个特殊按键
+    for (int i = 0; i < 3; i++)
     {
-        // 确认按键按下（防抖）
-        k_msleep(10);
-        tmp = GPIO_ReadSpecialKeyInput(0);
-        if (tmp == 1)
+        // 如果已有按键被按下，跳过后续按键检测
+        if (special_key_pressed)
         {
-            Key9000c = 0x4E;  // 吸液键
-            special_key_pressed = TRUE;
-            printk("Suction key pressed (0x4E)\n");
+            break;
         }
-    }
-    
-    if (!special_key_pressed)
-    {
-        // 恢复吸液键输出到高电平
-        GPIO_SetSpecialKeyOutput(0, 1);
         
-        // 检测走纸键 (扫描码 0x5D)
-        // KSCON3 PB7 output, KSNS1 PB1 input
-        // 拉低PB7，检测PB1
-        GPIO_SetSpecialKeyOutput(1, 0); // 1=走纸键, 0=低电平
+        // 拉低当前按键的输出引脚
+        GPIO_SetSpecialKeyOutput(i, 0); // 0=低电平
         k_msleep(1); // 短暂延时稳定信号
-        tmp = GPIO_ReadSpecialKeyInput(1); // 1=走纸键输入 (共用KSNS1)
         
-        if (tmp == 1)  // 如果PB1为低电平 (输入函数返回1表示原始GPIO为低，即按键按下)
+        // 根据按键类型读取对应的输入引脚
+        // 注意：走纸键和冲洗键共用同一个输入引脚 (KSNS1)
+        uint8_t input_idx = (i == 0) ? 0 : 1; // 吸液键使用输入0，走纸/冲洗键使用输入1
+        tmp = GPIO_ReadSpecialKeyInput(input_idx);
+        
+        if (tmp == 1)  // 如果输入为低电平 (输入函数返回1表示原始GPIO为低，即按键按下)
         {
             // 确认按键按下（防抖）
             k_msleep(10);
-            tmp = GPIO_ReadSpecialKeyInput(1);
+            tmp = GPIO_ReadSpecialKeyInput(input_idx);
             if (tmp == 1)
             {
-                Key9000c = 0x5D;  // 走纸键
+                Key9000c = key_codes[i];  // 设置按键码
                 special_key_pressed = TRUE;
-                printk("Paper feed key pressed (0x5D)\n");
+                
+                // 打印按键信息
+                if (i == 0) {
+                    printk("Suction key pressed (0x%02X)\n", Key9000c);
+                } else if (i == 1) {
+                    printk("Paper feed key pressed (0x%02X)\n", Key9000c);
+                } else if (i == 2) {
+                    printk("Flush key pressed (0x%02X)\n", Key9000c);
+                }
             }
         }
-    }
-    
-    if (!special_key_pressed)
-    {
-        // 恢复走纸键输出到高电平
-        GPIO_SetSpecialKeyOutput(1, 1);
         
-        // 检测冲洗键 (扫描码 0x55)
-        // KSCON1 PB5 output, KSNS1 PB1 input
-        // 拉低PB5，检测PB1
-        GPIO_SetSpecialKeyOutput(2, 0); // 2=冲洗键, 0=低电平
-        k_msleep(1); // 短暂延时稳定信号
-        tmp = GPIO_ReadSpecialKeyInput(1); // 1=走纸键/冲洗键输入 (共用KSNS1)
-        
-        if (tmp == 1)  // 如果PB1为低电平 (输入函数返回1表示原始GPIO为低，即按键按下)
-        {
-            // 确认按键按下（防抖）
-            k_msleep(10);
-            tmp = GPIO_ReadSpecialKeyInput(1);
-            if (tmp == 1)
-            {
-                Key9000c = 0x55;  // 冲洗键
-                special_key_pressed = TRUE;
-                printk("Flush key pressed (0x55)\n");
-            }
-        }
+        // 恢复当前按键输出引脚到高电平
+        GPIO_SetSpecialKeyOutput(i, 1);
     }
-    
-    // 恢复所有输出引脚到高电平
-    GPIO_SetSpecialKeyOutput(0, 1); // 吸液键
-    GPIO_SetSpecialKeyOutput(1, 1); // 走纸键
-    GPIO_SetSpecialKeyOutput(2, 1); // 冲洗键
     
     return special_key_pressed;
 }
