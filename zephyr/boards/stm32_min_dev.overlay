@@ -16,24 +16,55 @@
 		// 吸液键 (Suction key)
 		suction: suction {
 			gpios = <&gpiob 4 GPIO_ACTIVE_HIGH>;
-			label = "KSCON0 Suction Key Output";
+			label = "KSCON0";
 		};
 
 		// 走纸键 (Paper feed key)
 		paper_feed: paper_feed {
 			gpios = <&gpiob 7 GPIO_ACTIVE_HIGH>;
-			label = "KSCON3 Paper Feed Key Output";
+			label = "KSCON3";
 		};
 
 		// 冲洗键 (Flush key)
 		flush: flush {
 			gpios = <&gpiob 5 GPIO_ACTIVE_HIGH>;
-			label = "KSCON1 Flush Key Output";
+			label = "KSCON1";
 		};
 
 		led_capslock: capslock {
 			gpios = <&gpioc 15 GPIO_ACTIVE_HIGH>;
-			label = "capslock";
+			label = "CAPSLOCK";
+		};
+
+		row1: kb_row_1
+		{
+			gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
+			label = "A1";
+		};
+		row2: kb_row_2
+		{
+			gpios = <&gpiob 9 GPIO_ACTIVE_HIGH>;
+			label = "A2";
+		};
+		row3: kb_row_3
+		{
+			gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
+			label = "A3";
+		};
+		row4: kb_row_4
+		{
+			gpios = <&gpiob 11 GPIO_ACTIVE_HIGH>;
+			label = "A4";
+		};
+		row5: kb_row_5
+		{
+			gpios = <&gpiob 12 GPIO_ACTIVE_HIGH>;
+			label = "A5";
+		};
+		row6: kb_row_6
+		{
+			gpios = <&gpiob 13 GPIO_ACTIVE_HIGH>;
+			label = "A6";
 		};
 	};
 
@@ -42,17 +73,58 @@
 		compatible = "gpio-keys";
 		sw_suction: suction {
 			gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
-			label = "KSNS2 Suction Key Input";
+			label = "KSNS2";
 		};
 
 		sw_paper_feed: paper_feed {
 			gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
-			label = "KSNS1 Paper Feed Key Input";
+			label = "KSNS1";
 		};
 
 		sw_flush: flush {
 			gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
-			label = "KSNS1 Flush Key Input";
+			label = "KSNS1";
+		};
+
+		col1: kb_col_1
+		{
+			gpios = <&gpioa 0 GPIO_ACTIVE_HIGH>;
+			label = "B1";
+		};
+		col2: kb_col_2
+		{
+			gpios = <&gpioa 1 GPIO_ACTIVE_HIGH>;
+			label = "B2";
+		};
+		col3: kb_col_3
+		{
+			gpios = <&gpioa 2 GPIO_ACTIVE_HIGH>;
+			label = "B3";
+		};
+		col4: kb_col_4
+		{
+			gpios = <&gpioa 3 GPIO_ACTIVE_HIGH>;
+			label = "B4";
+		};
+		col5: kb_col_5
+		{
+			gpios = <&gpioa 4 GPIO_ACTIVE_HIGH>;
+			label = "B5";
+		};
+		col6: kb_col_6
+		{
+			gpios = <&gpioa 5 GPIO_ACTIVE_HIGH>;
+			label = "B6";
+		};
+		col7: kb_col_7
+		{
+			gpios = <&gpioa 6 GPIO_ACTIVE_HIGH>;
+			label = "B7";
+		};
+		col8: kb_col_8
+		{
+			gpios = <&gpioa 7 GPIO_ACTIVE_HIGH>;
+			label = "B8";
 		};
 	};
 
