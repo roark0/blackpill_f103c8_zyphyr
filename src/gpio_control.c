@@ -4,14 +4,14 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/printk.h>
 
-#include <stm32f1xx_hal.h>
+// #include <stm32f1xx_hal.h>
 
 /* 定义键盘行和列的GPIO引脚 (直接使用GPIO端口和引脚号) */
 static const struct device *kb_port = DEVICE_DT_GET(DT_NODELABEL(gpiob));  // GPIOB for all keyboard pins
 
 /* LED 引脚定义 */
-static struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-static struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
+static struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_NODELABEL(led1), gpios);
+static struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_NODELABEL(led2), gpios);
 
 /**
  * @brief 初始化GPIO控制模块
@@ -23,8 +23,8 @@ void GPIO_Control_Init(void)
 
     // 对于STM32F103，需要禁用JTAG/SWD功能以允许PB4用作普通GPIO
     // 通过AFIO的SWJ_CFG位来禁用JTAG功能
-    __HAL_RCC_AFIO_CLK_ENABLE();
-    __HAL_AFIO_REMAP_SWJ_NOJTAG();  // 只禁用JTAG，保留SWD
+    // __HAL_RCC_AFIO_CLK_ENABLE();
+    // __HAL_AFIO_REMAP_SWJ_NOJTAG();  // 只禁用JTAG，保留SWD
 
     // 检查GPIO设备是否就绪
     if (!device_is_ready(kb_port))
