@@ -71,8 +71,7 @@ int main(void)
         }
         
         printk("-----------------------------------\n");
-        // Keyboard_Scan_And_Transmit();
-        Key_Scan();
+        Keyboard_Scan_And_Transmit();
         // GPIO_SetKeyRows(0);
         
         // if (GPIO_ReadKeyCols())
