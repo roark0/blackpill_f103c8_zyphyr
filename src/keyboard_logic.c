@@ -250,7 +250,6 @@ unsigned int Key_Decode(unsigned int key)
     // 扫描码的断码加载在高字节,通码加载在低字节
     switch (key)
     {
-
         case 0xfdef:
             iKeyID = 0xF045;
             printk("0\n");
@@ -419,6 +418,7 @@ unsigned int Key_Decode(unsigned int key)
         case 0xfefd:
             iKeyID = 0xF058;
             printk("capslock\n");
+            GPIO_ToggleLED(2);
             break;  //capslock LED
         default:
             iKeyID = 0;

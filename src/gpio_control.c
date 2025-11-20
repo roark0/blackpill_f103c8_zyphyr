@@ -138,12 +138,10 @@ void GPIO_Control_Init(void)
  */
 void GPIO_SetKeyRows(uint8_t row_pattern)
 {
-    gpio_pin_set_dt(&kb_rows[0], (row_pattern & 0x01) ? 1 : 0);  // Row 0 - PB8
-    gpio_pin_set_dt(&kb_rows[1], (row_pattern & 0x02) ? 1 : 0);  // Row 1 - PB9
-    gpio_pin_set_dt(&kb_rows[2], (row_pattern & 0x04) ? 1 : 0);  // Row 2 - PB10
-    gpio_pin_set_dt(&kb_rows[3], (row_pattern & 0x08) ? 1 : 0);  // Row 3 - PB11
-    gpio_pin_set_dt(&kb_rows[4], (row_pattern & 0x10) ? 1 : 0);  // Row 4 - PB12
-    gpio_pin_set_dt(&kb_rows[5], (row_pattern & 0x20) ? 1 : 0);  // Row 5 - PB13
+    for (int i = 0; i < 6; i++)
+    {
+        gpio_pin_set_dt(&kb_rows[i], (row_pattern & (1 << i)) ? 1 : 0);
+    }
 }
 
 /**
@@ -168,22 +166,13 @@ uint8_t GPIO_ReadKeyCols(void)
 {
     uint8_t col_state = 0;
 
-    if (gpio_pin_get_dt(&kb_cols[0]) == 0)  // Col 0 - PA0, 低电平表示按键按下
-        col_state |= 0x01;
-    if (gpio_pin_get_dt(&kb_cols[1]) == 0)  // Col 1 - PA1
-        col_state |= 0x02;
-    if (gpio_pin_get_dt(&kb_cols[2]) == 0)  // Col 2 - PA2
-        col_state |= 0x04;
-    if (gpio_pin_get_dt(&kb_cols[3]) == 0)  // Col 3 - PA3
-        col_state |= 0x08;
-    if (gpio_pin_get_dt(&kb_cols[4]) == 0)  // Col 4 - PA4
-        col_state |= 0x10;
-    if (gpio_pin_get_dt(&kb_cols[5]) == 0)  // Col 5 - PA5
-        col_state |= 0x20;
-    if (gpio_pin_get_dt(&kb_cols[6]) == 0)  // Col 6 - PA6
-        col_state |= 0x40;
-    if (gpio_pin_get_dt(&kb_cols[7]) == 0)  // Col 7 - PA7
-        col_state |= 0x80;
+    for (int i = 0; i < 8; i++)
+    {
+        if (gpio_pin_get_dt(&kb_cols[i]) == 0)  // 低电平表示按键按下
+        {
+            col_state |= (1 << i);
+        }
+    }
 
     return col_state;
 }
