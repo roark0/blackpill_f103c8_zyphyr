@@ -13,7 +13,7 @@
 static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
 
-#define SLEEP_TIME_MS 1000
+#define SLEEP_TIME_MS 50
 
 int main(void)
 {
@@ -53,28 +53,37 @@ int main(void)
 
     printk("GPIO pins configured successfully\n");
 
-    // 闪烁两个LED的循环，并每500ms通过UART发送"hello world"
+    // LED闪烁控制计数器（用于实现1Hz闪烁）
+    int led_toggle_counter = 0;
+    const int led_toggle_interval = 10; // 10 * 50ms = 500ms，即0.5秒，实现1Hz闪烁
+
     while (1)
     {
-        ret = gpio_pin_toggle_dt(&led0);
-        if (ret < 0)
+        // 每500ms切换一次LED状态，实现1Hz闪烁
+        if (led_toggle_counter >= led_toggle_interval)
         {
-            printk("Failed to toggle GPIO pin for LED0 (err %d)\n", ret);
-            return 0;
-        }
+            ret = gpio_pin_toggle_dt(&led0);
+            if (ret < 0)
+            {
+                printk("Failed to toggle GPIO pin for LED0 (err %d)\n", ret);
+                return 0;
+            }
 
-        ret = gpio_pin_toggle_dt(&led1);
-        if (ret < 0)
+            ret = gpio_pin_toggle_dt(&led1);
+            if (ret < 0)
+            {
+                printk("Failed to toggle GPIO pin for LED1 (err %d)\n", ret);
+                return 0;
+            }
+            
+            led_toggle_counter = 0; // 重置计数器
+        }
+        else
         {
-            printk("Failed to toggle GPIO pin for LED1 (err %d)\n", ret);
-            return 0;
+            led_toggle_counter++; // 增加计数器
         }
         
         Keyboard_Scan_And_Transmit();
-        // GPIO_SetKeyRows(0);
-        
-        // if (GPIO_ReadKeyCols())
-        //     printk("Scanning keyboard %2X\n", GPIO_ReadKeyCols());
 
         k_msleep(SLEEP_TIME_MS);
     }
