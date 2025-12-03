@@ -7,7 +7,7 @@
 #include "uart_wrapper.h"
 
 // 吸液键 4E
-// KSCON0 PB4 output 
+// KSCON0 PB4 output
 // KSNS2 PB2 input
 
 // 走纸键 5D
@@ -508,13 +508,13 @@ void Function_Key_Decode(unsigned int Func_Key)
 /* 检测特殊按键函数 */
 UINT8 ScanSpecialKeys(void)
 {
-    volatile unsigned char tmp = 0x00;
+    volatile unsigned char tmp  = 0x00;
     uint8_t special_key_pressed = FALSE;
-    
+
     // 特殊按键的扫描码映射
     // 0=吸液键 (0x4E), 1=走纸键 (0x5D), 2=冲洗键 (0x55)
     const uint8_t key_codes[3] = {0x4E, 0x5D, 0x55};
-    
+
     // 检测每个特殊按键
     for (int i = 0; i < 3; i++)
     {
@@ -523,20 +523,20 @@ UINT8 ScanSpecialKeys(void)
         {
             break;
         }
-        
+
         // 拉低当前按键的输出引脚
-        GPIO_SetSpecialKeyOutput(i, 0); // 0=低电平
-        k_msleep(1); // 短暂延时稳定信号
-        
+        GPIO_SetSpecialKeyOutput(i, 0);  // 0=低电平
+        k_msleep(1);                     // 短暂延时稳定信号
+
         // 根据按键类型读取对应的输入引脚
         // 注意：走纸键和冲洗键共用同一个输入引脚 (KSNS1)
-        uint8_t input_idx = (i == 0) ? 0 : 1; // 吸液键使用输入0，走纸/冲洗键使用输入1
-        tmp = GPIO_ReadSpecialKeyInput(input_idx);
-        
+        uint8_t input_idx = (i == 0) ? 0 : 1;  // 吸液键使用输入0，走纸/冲洗键使用输入1
+        tmp               = GPIO_ReadSpecialKeyInput(input_idx);
+
         // 检测下降沿：从释放状态变为按下状态（0 -> 1）
-        uint8_t current_state = tmp;
+        uint8_t current_state  = tmp;
         uint8_t previous_state = prev_special_key_state[i];
-        
+
         // 只有在检测到下降沿时才处理按键按下
         if (previous_state == 0 && current_state == 1)
         {
@@ -545,35 +545,33 @@ UINT8 ScanSpecialKeys(void)
             tmp = GPIO_ReadSpecialKeyInput(input_idx);
             if (tmp == 1)  // 确认按键仍然按下
             {
-                Key9000c = key_codes[i];  // 设置按键码
+                Key9000c            = key_codes[i];  // 设置按键码
                 special_key_pressed = TRUE;
-                
+
                 // 打印按键信息
-                if (i == 0) {
+                if (i == 0)
+                {
                     printk("Suction key pressed (0x%02X)\n", Key9000c);
-                } else if (i == 1) {
+                }
+                else if (i == 1)
+                {
                     printk("Paper feed key pressed (0x%02X)\n", Key9000c);
-                } else if (i == 2) {
+                }
+                else if (i == 2)
+                {
                     printk("Flush key pressed (0x%02X)\n", Key9000c);
                 }
             }
         }
-        
+
         // 更新按键状态
         prev_special_key_state[i] = current_state;
-        
+
         // 恢复当前按键输出引脚到高电平
         GPIO_SetSpecialKeyOutput(i, 1);
     }
-    
-    return special_key_pressed;
-}
 
-/* 9000其他按键扫描函数 */
-UINT8 ScanOthekey9000(void)
-{
-    // 使用新的特殊按键检测函数
-    return ScanSpecialKeys();
+    return special_key_pressed;
 }
 
 /* 键盘扫描和传输主函数 */
@@ -590,7 +588,7 @@ void Keyboard_Scan_And_Transmit(void)
             //at last the second breakcode is transmitted followed by the first function key's breakcode
             if (Flag_Updown == 1)
             {
-                printk("Function key detected, sending function key codes\n");
+                printk("Function key detected, sending function key codes:%X %X %X %X\n", ((gFunc_Buffer >> 8) & 0xff), (gFunc_Buffer & 0xff), ((Key >> 8) & 0xff), (Key & 0xff));
                 uart_send_char((gFunc_Buffer >> 8) & 0xff);
 
                 uart_send_char(gFunc_Buffer & 0xff);
@@ -607,7 +605,7 @@ void Keyboard_Scan_And_Transmit(void)
             uart_send_char(Key & 0xff);
         }
     }
-    else if (ScanOthekey9000())
+    else if (ScanSpecialKeys())
     {
         printk("Special key detected, sending codes: 0xF0 0x%02X\n", Key9000c);
         uart_send_char(0xF0);

@@ -41,10 +41,10 @@ extern volatile uint8_t Key9000c;
 
 extern volatile char G_uc9000ScanInterval;
 
-UINT8 ScanOthekey9000(void);
 UINT8 Key_Scan(void);
 unsigned int Key_Decode(unsigned int key);
 void Function_Key_Decode(unsigned int Func_Key);
+UINT8 ScanSpecialKeys(void);
 void Keyboard_Scan_And_Transmit(void);
 
 #ifdef __cplusplus

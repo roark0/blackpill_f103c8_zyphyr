@@ -145,3 +145,8 @@
 zephyr_udc0: &usb {
 	status = "disabled";  /* 禁用USB功能以避免与PA11冲突 */
 };
+
+&pinctrl {
+	swj-cfg = "jtag-disable";
+};
+
