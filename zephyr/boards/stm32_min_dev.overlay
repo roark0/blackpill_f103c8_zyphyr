@@ -5,29 +5,147 @@
 	leds {
 		compatible = "gpio-leds";
 		led1: led_1 {
-			gpios = <&gpioa 11 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpioc 13 GPIO_ACTIVE_LOW>;
+			label = "LED1";
 		};
 		led2: led_2 {
-			gpios = <&gpioa 12 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpioc 14 GPIO_ACTIVE_LOW>;
+			label = "LED2";
 		};
-			led_capslock: capslock {
-			gpios = <&gpioc 15 GPIO_ACTIVE_HIGH>;
-			label = "CAPSLOCK";
+		led3: led_3 {
+			gpios = <&gpioa 11 GPIO_ACTIVE_LOW>;
+			label = "LED3";
+		};
+		led4: led_4 {
+			gpios = <&gpioa 12 GPIO_ACTIVE_LOW>;
+			label = "LED4";
+		};
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+		sw1: button_1 {
+			gpios = <&gpioa 4 GPIO_PULL_UP>;
+			label = "SW1";
+		};
+		sw3: button_3 {
+			gpios = <&gpioa 5 GPIO_PULL_UP>;
+			label = "SW3";
+		};
+		sw5: button_5 {
+			gpios = <&gpioa 6 GPIO_PULL_UP>;
+			label = "SW5";
+		};
+		sw7: button_7 {
+			gpios = <&gpioa 7 GPIO_PULL_UP>;
+			label = "SW7";
+		};
+	};
+
+	/* 十位数码管段选 */
+	digit_display_tens: digit_display_tens {
+		compatible = "gpio-controller";
+		#gpio-cells = <2>;
+		gpio-controller;
+		tens_a: tens_a {
+			gpios = <&gpioa 0 GPIO_ACTIVE_HIGH>;
+			label = "SHIWEI_A";
+		};
+		tens_b: tens_b {
+			gpios = <&gpioa 3 GPIO_ACTIVE_HIGH>;
+			label = "SHIWEI_B";
+		};
+		tens_c: tens_c {
+			gpios = <&gpioa 2 GPIO_ACTIVE_HIGH>;
+			label = "SHIWEI_C";
+		};
+		tens_d: tens_d {
+			gpios = <&gpioa 1 GPIO_ACTIVE_HIGH>;
+			label = "SHIWEI_D";
+		};
+	};
+
+	/* 个位数码管段选 */
+	digit_display_units: digit_display_units {
+		compatible = "gpio-controller";
+		#gpio-cells = <2>;
+		gpio-controller;
+		units_a: units_a {
+			gpios = <&gpiob 6 GPIO_ACTIVE_HIGH>;
+			label = "GEWEI_A";
+		};
+		units_b: units_b {
+			gpios = <&gpiob 7 GPIO_ACTIVE_HIGH>;
+			label = "GEWEI_B";
+		};
+		units_c: units_c {
+			gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
+			label = "GEWEI_C";
+		};
+		units_d: units_d {
+			gpios = <&gpiob 9 GPIO_ACTIVE_HIGH>;
+			label = "GEWEI_D";
+		};
+	};
+
+	/* 小数位数码管段选 */
+	digit_display_decimal: digit_display_decimal {
+		compatible = "gpio-controller";
+		#gpio-cells = <2>;
+		gpio-controller;
+		decimal_a: decimal_a {
+			gpios = <&gpiob 15 GPIO_ACTIVE_HIGH>;
+			label = "XIAOSHUWEI_A";
+		};
+		decimal_b: decimal_b {
+			gpios = <&gpiob 14 GPIO_ACTIVE_HIGH>;
+			label = "XIAOSHUWEI_B";
+		};
+		decimal_c: decimal_c {
+			gpios = <&gpiob 13 GPIO_ACTIVE_HIGH>;
+			label = "XIAOSHUWEI_C";
+		};
+		decimal_d: decimal_d {
+			gpios = <&gpiob 12 GPIO_ACTIVE_HIGH>;
+			label = "XIAOSHUWEI_D";
 		};
 	};
 
 	aliases {
 		led1 = &led1;
 		led2 = &led2;
+		led3 = &led3;
+		led4 = &led4;
 	};
 };
 
-&usart1 {
-	/* 配置为兼容旧程序的 19200 波特率 */
-	current-speed = <19200>;
-	/* 配置为 8 位数据 + 奇校验 */
-	parity = "odd";
+&adc1 {
+	compatible = "st,stm32-adc";
 	status = "okay";
+};
+
+/* 传感器配置 */
+sensor_temp: sensor_temp {
+	compatible = "st,stm32-adc-channel";
+	io-channels = <&adc1 8>; /* PB0, ADC1_IN8 */
+	label = "TEMP";
+};
+
+sensor_yl: sensor_yl {
+	compatible = "st,stm32-adc-channel";
+	io-channels = <&adc1 9>; /* PB11, ADC1_IN9 */
+	label = "YL";
+};
+
+&usart1 {
+	current-speed = <115200>;
+	status = "okay";
+};
+
+/* 电源控制引脚 */
+powcl: powcl {
+	gpios = <&gpioa 8 GPIO_ACTIVE_HIGH>;
+	label = "POWCL";
 };
 
 zephyr_udc0: &usb {

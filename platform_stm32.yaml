@@ -1,0 +1,77 @@
+# platform_stm32.yaml
+platform:
+  name: STM32F103C8T6
+  architecture: ARM Cortex-M3
+  clock:
+    external_crystal: 8000000    # 8 MHz HSE
+    system_clock: 72000000       # PLL output, 72 MHz
+
+pin_groups:
+  - name: led
+    type: gpio_output
+    note: "板载 LED,低电平点亮(共阳接法)"
+    pins:
+      LED1: PC13   # legacy: P1.0
+      LED2: PC14   # legacy: P1.1
+      LED3: PA11   # legacy: P1.2
+      LED4: PA12   # legacy: P1.3
+
+  - name: switch
+    type: gpio_input
+    note: "按键输入,建议配置为上拉输入,按下为低电平"
+    pull: up
+    pins:
+      SW1: PA4     # legacy: P2.7
+      SW3: PA5     # legacy: P2.6
+      SW5: PA6     # legacy: P2.5
+      SW7: PA7     # legacy: P2.4
+
+  - name: digit_display_shiwei
+    type: gpio_output
+    note: "十位数码管段选(A/B/C/D),静态驱动或动态扫描"
+    pins:
+      SHIWEI_A: PA0   # legacy: P0.4
+      SHIWEI_B: PA3   # legacy: P0.7
+      SHIWEI_C: PA2   # legacy: P0.6
+      SHIWEI_D: PA1   # legacy: P0.5
+
+  - name: digit_display_gewei
+    type: gpio_output
+    note: "个位数码管段选(A/B/C/D)"
+    pins:
+      GEWEI_A: PB6    # legacy: P0.0
+      GEWEI_B: PB7    # legacy: P0.1
+      GEWEI_C: PB8    # legacy: P0.2
+      GEWEI_D: PB9    # legacy: P0.3
+
+  - name: digit_display_xiaoshuwei
+    type: gpio_output
+    note: "小数位数码管段选(A/B/C/D)"
+    pins:
+      XIAOSHUWEI_A: PB15   # legacy: P2.0
+      XIAOSHUWEI_B: PB14   # legacy: P2.1
+      XIAOSHUWEI_C: PB13   # legacy: P2.2
+      XIAOSHUWEI_D: PB12   # legacy: P2.3
+
+  - name: analog
+    type: adc
+    note: "模拟信号输入,使用 ADC1"
+    adc_instance: ADC1
+    pins:
+      TEMP: PB0    # legacy: P1.5, ADC1_IN8
+      YL:   PB11   # legacy: P3.2, ADC1_IN9
+
+  - name: power_control
+    type: gpio_output
+    note: "电源控制信号,高电平有效(驱动 MOSFET 或继电器)"
+    pins:
+      POWCL: PA8   # legacy: P1.4
+
+  - name: usart1
+    type: usart
+    note: "新增串口通信功能,用于调试或外部通信"
+    instance: USART1
+    baudrate: 115200
+    pins:
+      UART1_TX: PA9    # new feature, no legacy
+      UART1_RX: PA10   # new feature, no legacy
