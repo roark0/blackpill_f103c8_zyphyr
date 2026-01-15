@@ -96,9 +96,10 @@ int main(void)
     float current_temperature_setpoints[] = {25.3f, 30.3f, 37.3f, 45.3f};
 
     // 初始化 PID 控制器
-    // Kp=2.0, Ki=0.1, Kd=0.5, 输出范围 0-100%
+    // Kp=0.8, Ki=0.05, Kd=0.3, 输出范围 0-1
+    // 降低 Kp 防止温度过载，增加 Ki 提高稳态精度
     pid_controller_t pid;
-    pid_init(&pid, 2.0f, 0.1f, 0.5f, current_temperature_setpoints[current_temperature_index], 0.0f, 100.0f);
+    pid_init(&pid, 0.8f, 0.05f, 0.3f, current_temperature_setpoints[current_temperature_index], 0.0f, 1.0f);
 
     // 主循环
     while (1)
@@ -115,15 +116,15 @@ int main(void)
         // 计算 PID 输出
         float pid_output = pid_compute(&pid, current_temperature);
 
-        // 温度控制逻辑（使用 PWM 模拟，简单实现为开关控制）
+        // 温度控制逻辑（使用 PID 输出阈值控制）
         LOG_INF("current_temperature=%.2f, setpoint=%.2f, pid_output=%.2f", (double)current_temperature,
                 (double)pid.setpoint, (double)pid_output);
 
-        // PID 输出 > 0 时开启加热器
-        if (pid_output > 0.0f && current_temperature > 0.0f)
+        // PID 输出 > 0.3 时开启加热器（阈值可调）
+        if (pid_output > 0.4f && current_temperature > 0.0f)
         {
             gpio_pin_set_dt(&heater, 1);
-            LOG_INF("heater");
+            LOG_WRN("heater");
         }
         else
         {
