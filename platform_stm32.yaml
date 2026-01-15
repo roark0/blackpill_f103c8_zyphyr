@@ -53,14 +53,12 @@ pin_groups:
       XIAOSHUWEI_C: PB13   # legacy: P2.2
       XIAOSHUWEI_D: PB12   # legacy: P2.3
 
-  - name: analog
-    type: adc
-    note: "模拟信号输入,使用 ADC1"
-    adc_instance: ADC1
-    pins:
-      TEMP: PB0    # legacy: P1.5, ADC1_IN8
-      YL:   PB11   # legacy: P3.2, ADC1_IN9
 
+    TEMP: PB0    # legacy: P1.5, ADC1_IN8
+    
+    YL:   PB11   # legacy: P3.2,  FLAG
+
+# 加热
   - name: power_control
     type: gpio_output
     note: "电源控制信号,高电平有效(驱动 MOSFET 或继电器)"

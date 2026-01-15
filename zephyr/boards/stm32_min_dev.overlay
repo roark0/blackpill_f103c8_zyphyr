@@ -40,36 +40,47 @@
 			gpios = <&gpioa 7 GPIO_PULL_UP>;
 			label = "SW7";
 		};
+		// 档位切换按钮
+		mode_btn: mode_btn {
+			gpios = <&gpiob 11 GPIO_PULL_UP>;
+			label = "FLAG";
+		};
+
+		heater_gpio: heater_gpio {
+			gpios = <&gpioa 8 GPIO_ACTIVE_HIGH>;
+			label = "POWCL";
+		};
+
+		/* DS18B20 数据线 */
+		ds18b20_dq: ds18b20_dq {
+			gpios = <&gpiob 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+			label = "DQ";
+		};
 	};
 
-	/* 十位数码管段选 */
 	digit_display_tens: digit_display_tens {
-		compatible = "gpio-controller";
-		#gpio-cells = <2>;
-		gpio-controller;
-		tens_a: tens_a {
-			gpios = <&gpioa 0 GPIO_ACTIVE_HIGH>;
-			label = "SHIWEI_A";
-		};
-		tens_b: tens_b {
-			gpios = <&gpioa 3 GPIO_ACTIVE_HIGH>;
-			label = "SHIWEI_B";
-		};
-		tens_c: tens_c {
-			gpios = <&gpioa 2 GPIO_ACTIVE_HIGH>;
-			label = "SHIWEI_C";
-		};
-		tens_d: tens_d {
-			gpios = <&gpioa 1 GPIO_ACTIVE_HIGH>;
-			label = "SHIWEI_D";
-		};
-	};
+    compatible = "gpio-leds";
+    tens_a: tens_a {
+        gpios = <&gpioa 0 GPIO_ACTIVE_HIGH>;
+        label = "SHIWEI_A";
+    };
+    tens_b: tens_b {
+        gpios = <&gpioa 3 GPIO_ACTIVE_HIGH>;
+        label = "SHIWEI_B";
+    };
+    tens_c: tens_c {
+        gpios = <&gpioa 2 GPIO_ACTIVE_HIGH>;
+        label = "SHIWEI_C";
+    };
+    tens_d: tens_d {
+        gpios = <&gpioa 1 GPIO_ACTIVE_HIGH>;
+        label = "SHIWEI_D";
+    };
+};
 
 	/* 个位数码管段选 */
 	digit_display_units: digit_display_units {
-		compatible = "gpio-controller";
-		#gpio-cells = <2>;
-		gpio-controller;
+		compatible = "gpio-leds";
 		units_a: units_a {
 			gpios = <&gpiob 6 GPIO_ACTIVE_HIGH>;
 			label = "GEWEI_A";
@@ -90,9 +101,7 @@
 
 	/* 小数位数码管段选 */
 	digit_display_decimal: digit_display_decimal {
-		compatible = "gpio-controller";
-		#gpio-cells = <2>;
-		gpio-controller;
+		compatible = "gpio-leds";
 		decimal_a: decimal_a {
 			gpios = <&gpiob 15 GPIO_ACTIVE_HIGH>;
 			label = "XIAOSHUWEI_A";
@@ -112,30 +121,23 @@
 	};
 
 	aliases {
-		led1 = &led1;
-		led2 = &led2;
-		led3 = &led3;
-		led4 = &led4;
+		led0 = &led1;
+		led1 = &led2;
+		led2 = &led3;
+		led3 = &led4;
+		heater = &heater_gpio;
+		dq = &ds18b20_dq;
+		sw1 = &sw1;
+		sw3 = &sw3;
+		sw5 = &sw5;
+		sw7 = &sw7;
 	};
 };
 
-&adc1 {
-	compatible = "st,stm32-adc";
-	status = "okay";
-};
-
-/* 传感器配置 */
-sensor_temp: sensor_temp {
-	compatible = "st,stm32-adc-channel";
-	io-channels = <&adc1 8>; /* PB0, ADC1_IN8 */
-	label = "TEMP";
-};
-
-sensor_yl: sensor_yl {
-	compatible = "st,stm32-adc-channel";
-	io-channels = <&adc1 9>; /* PB11, ADC1_IN9 */
-	label = "YL";
-};
+// &adc1 {
+// 	compatible = "st,stm32-adc";
+// 	status = "okay";
+// };
 
 &usart1 {
 	current-speed = <115200>;
@@ -143,10 +145,14 @@ sensor_yl: sensor_yl {
 };
 
 /* 电源控制引脚 */
-powcl: powcl {
-	gpios = <&gpioa 8 GPIO_ACTIVE_HIGH>;
-	label = "POWCL";
-};
+// powcl: powcl {
+// 	gpios = <&gpioa 8 GPIO_ACTIVE_HIGH>;
+// 	label = "POWCL";
+// };
+
+
+
+
 
 zephyr_udc0: &usb {
 	status = "disabled";  /* 禁用USB功能以避免与PA11冲突 */
@@ -155,4 +161,13 @@ zephyr_udc0: &usb {
 &pinctrl {
 	swj-cfg = "jtag-disable";
 };
+
+/* 启用 TIM2 定时器用于精准微秒延时 */
+// &timers2 {
+// 	status = "okay";
+// 	pwm2: pwm {
+// 		status = "okay";
+// 		/* pinctrl-0 = <&tim2_ch1_pa0>; */
+// 	};
+// };
 
