@@ -78,10 +78,7 @@ int main(void)
     }
     #endif
     // 初始化 LED 状态
-    led_set_state(0, 0);
-    led_set_state(1, 0);
-    led_set_state(2, 1);
-    led_set_state(3, 0);
+    led_set_single(2);  // 默认点亮第 3 个 LED（索引 2）
     gpio_pin_set_dt(&heater, 0);
 
     // 初始化数码管
@@ -151,10 +148,7 @@ int main(void)
             current_temperature_index = (current_temperature_index + 1) % 4;
 
             // 设置 LED 状态：只有当前活动的 LED 亮起
-            for (int i = 0; i < 4; i++)
-            {
-                led_set_state(i, (i == current_temperature_index) ? 1 : 0);
-            }
+            led_set_single(current_temperature_index);
 
             // 重置 PID 控制器
             pid_reset(&pid);

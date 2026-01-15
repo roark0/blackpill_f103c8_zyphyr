@@ -25,6 +25,12 @@ void led_set_state(uint8_t led_index, int state);
 void led_set_all(int state);
 
 /**
+ * @brief Set only one LED on, all others off
+ * @param led_index LED index (0-3) to turn on
+ */
+void led_set_single(uint8_t led_index);
+
+/**
  * @brief Set LED pattern using bit mask
  * @param pattern Bit mask where bit i controls LED i
  */

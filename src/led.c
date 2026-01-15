@@ -68,6 +68,21 @@ void led_set_all(int state)
     }
 }
 
+// 只亮一个 LED，其他全部熄灭
+void led_set_single(uint8_t led_index)
+{
+    if (led_index >= LED_COUNT)
+    {
+        LOG_ERR("LED index out of range: %d", led_index);
+        return;
+    }
+
+    for (int i = 0; i < LED_COUNT; i++)
+    {
+        gpio_pin_set_dt(&leds[i], (i == led_index) ? 1 : 0);
+    }
+}
+
 // 设置 LED 模式（使用位掩码）
 void led_set_pattern(uint8_t pattern)
 {
