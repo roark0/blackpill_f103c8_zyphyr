@@ -242,6 +242,7 @@ float ds18b20_read_temperature(void)
     int retry_count = 0;
     const int max_retries = 3;
     static float last_valid_temp = 25.0f;  // 保存上一次有效温度
+    static bool first_read = true;  // 首次读取标志
 
     while (retry_count < max_retries)
     {
@@ -299,6 +300,25 @@ float ds18b20_read_temperature(void)
             retry_count++;
             delay_ms(10);
             continue;
+        }
+
+        // 温度变化合理性检查（单次变化不应超过 2°C）
+        // 首次读取时跳过检查，避免初始值偏差导致的误报
+        if (!first_read)
+        {
+            float temp_change = temp_mid - last_valid_temp;
+            if (temp_change > 2.0f || temp_change < -2.0f)
+            {
+                LOG_WRN("DS18B20 temperature jump detected: %.2f -> %.2f (change: %.2f)",
+                        (double)last_valid_temp, (double)temp_mid, (double)temp_change);
+                retry_count++;
+                delay_ms(10);
+                continue;
+            }
+        }
+        else
+        {
+            first_read = false;  // 标记首次读取完成
         }
 
         // 温度有效，更新缓存

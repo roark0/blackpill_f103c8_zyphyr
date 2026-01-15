@@ -124,12 +124,14 @@ int main(void)
         if (pid_output > 0.4f && current_temperature > 0.0f)
         {
             gpio_pin_set_dt(&heater, 1);
+            led_set_state(3, 1);
             LOG_WRN("heater");
         }
         else
         {
             LOG_INF("no heater");
             gpio_pin_set_dt(&heater, 0);
+            led_set_state(3, 0);
         }
       
         // 计算输出温度（添加固定的 -4 偏移，对应 fugaijin.c 的 temp - 4）

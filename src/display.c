@@ -137,7 +137,7 @@ void display_temp(float temperature)
             gpio_pin_set_dt(&units_segments[i], (units_digit >> i) & 0x01);
         }
 
-        LOG_INF("Temperature: %d.%d", integer_part, decimal_digit);
+        // LOG_INF("Temperature: %d.%d", integer_part, decimal_digit);
     }
     else
     {
