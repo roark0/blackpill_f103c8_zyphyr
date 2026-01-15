@@ -9,13 +9,12 @@ LOG_MODULE_REGISTER(switch, LOG_LEVEL_INF);
 
 // GPIO 设备结构
 static const struct gpio_dt_spec mode_btn = GPIO_DT_SPEC_GET(DT_NODELABEL(mode_btn), gpios);
-static const struct gpio_dt_spec sw1      = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios);
-static const struct gpio_dt_spec sw3      = GPIO_DT_SPEC_GET(DT_ALIAS(sw3), gpios);
-static const struct gpio_dt_spec sw5      = GPIO_DT_SPEC_GET(DT_ALIAS(sw5), gpios);
-static const struct gpio_dt_spec sw7      = GPIO_DT_SPEC_GET(DT_ALIAS(sw7), gpios);
-
-// Switch 数组定义
-static const struct gpio_dt_spec *switches[SWITCH_COUNT] = {&sw1, &sw3, &sw5, &sw7};
+static const struct gpio_dt_spec switches[SWITCH_COUNT] = {
+    GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios),
+    GPIO_DT_SPEC_GET(DT_ALIAS(sw3), gpios),
+    GPIO_DT_SPEC_GET(DT_ALIAS(sw5), gpios),
+    GPIO_DT_SPEC_GET(DT_ALIAS(sw7), gpios),
+};
 
 // 按键中断相关
 static struct gpio_callback button_cb_data;
@@ -51,7 +50,7 @@ int switch_init(void)
     // 检查所有开关设备是否就绪
     for (int i = 0; i < SWITCH_COUNT; i++)
     {
-        if (!device_is_ready(switches[i]->port))
+        if (!device_is_ready(switches[i].port))
         {
             LOG_ERR("SW%d device not ready", i);
             return -1;
@@ -61,7 +60,7 @@ int switch_init(void)
     // 配置所有开关为输入
     for (int i = 0; i < SWITCH_COUNT; i++)
     {
-        ret = gpio_pin_configure_dt(switches[i], GPIO_INPUT);
+        ret = gpio_pin_configure_dt(&switches[i], GPIO_INPUT);
         if (ret != 0)
         {
             LOG_ERR("Failed to configure SW%d", i);
@@ -86,15 +85,15 @@ float switch_read_settings(void)
     // SW3 -> bit 2 (值 8)
 
     // 读取 SW3, SW5, SW7 状态 (注意：上拉电阻，按下时为低电平)
-    if (!gpio_pin_get_dt(switches[3]))  // SW3
+    if (!gpio_pin_get_dt(&switches[3]))  // SW3
     {
         value |= 0x01;  // bit 0
     }
-    if (!gpio_pin_get_dt(switches[2]))  // SW5
+    if (!gpio_pin_get_dt(&switches[2]))  // SW5
     {
         value |= 0x02;  // bit 1
     }
-    if (!gpio_pin_get_dt(switches[1]))  // SW7
+    if (!gpio_pin_get_dt(&switches[1]))  // SW7
     {
         value |= 0x04;  // bit 2
     }
@@ -103,7 +102,7 @@ float switch_read_settings(void)
     set_num = (float)(value * 0.2);
 
     // 读取 SW1 (SET_S) 控制偏移方向
-    int set_s_state = gpio_pin_get_dt(&sw1);  // SW1
+    int set_s_state = gpio_pin_get_dt(&switches[0]);  // SW1
 
     // 根据 SET_S 方向返回带符号的偏移值
     if (set_s_state == 1)  // SW1 没按下 (高电平)
