@@ -27,7 +27,6 @@ static const struct gpio_dt_spec heater = GPIO_DT_SPEC_GET(HEATER_NODE, gpios);
 int main(void)
 {
     float current_temperature;
-    float target_temperature = 37.3;
     float display_temperature;
     int ret;
 
@@ -71,7 +70,7 @@ int main(void)
     }
 
     // 配置 GPIO
-    ret = gpio_pin_configure_dt(&heater, GPIO_OUTPUT);
+    ret = gpio_pin_configure_dt(&heater, GPIO_OUTPUT| GPIO_OPEN_DRAIN);
     if (ret != 0)
     {
         LOG_ERR("Failed to configure heater");
@@ -127,9 +126,11 @@ int main(void)
         if (pid_output > 0.0f && current_temperature > 0.0f)
         {
             gpio_pin_set_dt(&heater, 1);
+            LOG_INF("heater");
         }
         else
         {
+            LOG_INF("no heater");
             gpio_pin_set_dt(&heater, 0);
         }
       
