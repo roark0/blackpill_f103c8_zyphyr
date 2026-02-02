@@ -134,9 +134,12 @@ int main(void)
             gpio_pin_set_dt(&heater, 0);
         }
 
-        // 温度平滑处理：上次值 * 10 + 当前值) / 11
+#define TARGET_TIMES 0
+#define LAST_TIMES 0
+
         curent_display_temperature =
-            (last_display_temperature * 9.0f + current_temperature + base_temperature_setpoints[current_temperature_index] * 20) / 30.0f;
+            (last_display_temperature * LAST_TIMES + current_temperature + base_temperature_setpoints[current_temperature_index] * TARGET_TIMES)
+            / (TARGET_TIMES + LAST_TIMES + 1);
         last_display_temperature = curent_display_temperature;
 
         // 显示温度
@@ -164,7 +167,7 @@ int main(void)
             pid_set_setpoint(&pid, current_temperature_setpoints[current_temperature_index]);
         }
 
-        k_msleep(10);  // 主循环延时
+        k_msleep(50);  // 主循环延时
         gpio_pin_set_dt(&heater, 0);
         if (current_temperature_setpoints[current_temperature_index] - current_temperature > 3)
         {
