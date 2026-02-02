@@ -11,9 +11,10 @@ int ds18b20_init(void);
 
 /**
  * @brief Read temperature from DS18B20
- * @return Temperature value in Celsius
+ * @param temp_offset Temperature offset to apply
+ * @return Temperature value in Celsius with offset applied
  */
-float ds18b20_read_temperature(void);
+float ds18b20_read_temperature(float temp_offset);
 
 /**
  * @brief Run DS18B20 diagnostic test
