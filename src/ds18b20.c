@@ -109,7 +109,7 @@ static int init_ds18b20(void)
         }
         else
         {
-            LOG_WRN("DS18B20 not detected on attempt %d", retry_count + 1);
+            LOG_INF("DS18B20 not detected on attempt %d", retry_count + 1);
             retry_count++;
             if (retry_count < max_retries)
             {
@@ -271,7 +271,7 @@ float ds18b20_read_temperature(void)
     {
         if (init_ds18b20() != 0)
         {
-            LOG_WRN("DS18B20 init failed on read attempt %d", retry_count + 1);
+            LOG_INF("DS18B20 init failed on read attempt %d", retry_count + 1);
             retry_count++;
             delay_ms(10);
             continue;
@@ -285,7 +285,7 @@ float ds18b20_read_temperature(void)
 
         if (init_ds18b20() != 0)
         {
-            LOG_WRN("DS18B20 init failed on read attempt %d", retry_count + 1);
+            LOG_INF("DS18B20 init failed on read attempt %d", retry_count + 1);
             retry_count++;
             delay_ms(10);
             continue;
@@ -303,7 +303,7 @@ float ds18b20_read_temperature(void)
         // CRC 校验
         if (crc8(ramvalue, 8) != ramvalue[8])
         {
-            LOG_WRN("DS18B20 CRC error on read attempt %d", retry_count + 1);
+            LOG_INF("DS18B20 CRC error on read attempt %d", retry_count + 1);
             retry_count++;
             delay_ms(10);
             continue;
@@ -357,7 +357,7 @@ float ds18b20_read_temperature(void)
     {
         first_read = false;
     }
-    
+
     // 如果读取次数不足10次，只取实际读取的数量
     int readings_to_sort = valid_readings;
     int readings_to_keep = readings_to_sort - 4;  // 去掉2个最大和2个最小

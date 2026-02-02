@@ -26,8 +26,6 @@ static const struct gpio_dt_spec heater = GPIO_DT_SPEC_GET(HEATER_NODE, gpios);
 // 主函数
 int main(void)
 {
-    float current_temperature;
-    float display_temperature;
     int ret;
 
     LOG_INF("Temperature Control System Starting...");
@@ -39,7 +37,7 @@ int main(void)
         LOG_ERR("Failed to initialize LEDs");
         return ret;
     }
-    #if 1
+#if 1
     // 初始化按键中断
     ret = button_init();
     if (ret != 0)
@@ -70,13 +68,13 @@ int main(void)
     }
 
     // 配置 GPIO
-    ret = gpio_pin_configure_dt(&heater, GPIO_OUTPUT| GPIO_OPEN_DRAIN);
+    ret = gpio_pin_configure_dt(&heater, GPIO_OUTPUT | GPIO_OPEN_DRAIN);
     if (ret != 0)
     {
         LOG_ERR("Failed to configure heater");
         return ret;
     }
-    #endif
+#endif
     // 初始化 LED 状态
     led_set_single(2);  // 默认点亮第 3 个 LED（索引 2）
     gpio_pin_set_dt(&heater, 0);
@@ -92,23 +90,31 @@ int main(void)
     LOG_INF("System initialized, starting main loop");
     uint8_t current_temperature_index     = 2;
     float temperature_offset              = 0.0f;                          // 温度偏移值
-    float base_temperature_setpoints[]    = {25.0f, 30.0f, 36.3f, 45.0f};  // 温度设置数组
-    float current_temperature_setpoints[] = {25.0f, 30.0f, 36.3f, 45.0f};
+    float base_temperature_setpoints[]    = {25.0f, 30.0f, 37.0f, 45.0f};  // 温度设置数组
+    float current_temperature_setpoints[] = {25.0f, 30.0f, 37.0f, 45.0f};
+    float current_temperature;
+    float curent_display_temperature;
+    float last_display_temperature = 37;
 
     // 初始化 PID 控制器
     // Kp=0.8, Ki=0.05, Kd=0.3, 输出范围 0-1
     // 降低 Kp 防止温度过载，增加 Ki 提高稳态精度
     pid_controller_t pid;
-    pid_init(&pid, 0.8f, 0.05f, 0.3f, current_temperature_setpoints[current_temperature_index], 0.0f, 1.0f);
+    pid_init(&pid, 0.9f, 0.05f, 0.3f, current_temperature_setpoints[current_temperature_index], 0.0f, 1.0f);
 
     // 主循环
     while (1)
     {
         // 读取开关设置并直接应用校准（包含 SET_S 方向控制）
-        temperature_offset                                       = switch_read_settings();
+        temperature_offset                                       = switch_read_settings() - 1.0f;
         current_temperature_setpoints[current_temperature_index] = base_temperature_setpoints[current_temperature_index] + temperature_offset;
 
         current_temperature = ds18b20_read_temperature();
+        LOG_INF("current_temperature=%.2f, %.2f, %.2f", (double)current_temperature, (double)(current_temperature + temperature_offset),
+                (double)temperature_offset);
+
+        // 计算输出温度
+        current_temperature = current_temperature + temperature_offset;
 
         // 更新 PID 设定值
         pid_set_setpoint(&pid, current_temperature_setpoints[current_temperature_index]);
@@ -116,29 +122,29 @@ int main(void)
         // 计算 PID 输出
         float pid_output = pid_compute(&pid, current_temperature);
 
-        // 温度控制逻辑（使用 PID 输出阈值控制）
-        LOG_INF("current_temperature=%.2f, setpoint=%.2f, pid_output=%.2f", (double)current_temperature,
-                (double)pid.setpoint, (double)pid_output);
-
         // PID 输出 > 0.3 时开启加热器（阈值可调）
         if (pid_output > 0.4f && current_temperature > 0.0f)
         {
             gpio_pin_set_dt(&heater, 1);
-            led_set_state(3, 1);
             LOG_WRN("heater");
         }
         else
         {
-            LOG_INF("no heater");
+            // LOG_INF("no heater");
             gpio_pin_set_dt(&heater, 0);
-            led_set_state(3, 0);
         }
- 
-        // 计算输出温度
-        display_temperature = current_temperature + temperature_offset;
+
+        // 温度平滑处理：上次值 * 10 + 当前值) / 11
+        curent_display_temperature =
+            (last_display_temperature * 9.0f + current_temperature + base_temperature_setpoints[current_temperature_index] * 20) / 30.0f;
+        last_display_temperature = curent_display_temperature;
 
         // 显示温度
-        display_temp(display_temperature);
+        // 温度控制逻辑（使用 PID 输出阈值控制）
+        LOG_INF("display_temperature=%.2f, setpoint=%.2f, pid_output=%.2f", (double)curent_display_temperature, (double)pid.setpoint,
+                (double)pid_output);
+
+        display_temp(curent_display_temperature);
 
         // 处理按键事件（中断方式）
         if (button_is_pressed())
@@ -158,7 +164,14 @@ int main(void)
             pid_set_setpoint(&pid, current_temperature_setpoints[current_temperature_index]);
         }
 
-        k_msleep(100);  // 主循环延时
+        k_msleep(10);  // 主循环延时
+        gpio_pin_set_dt(&heater, 0);
+        if (current_temperature_setpoints[current_temperature_index] - current_temperature > 3)
+        {
+            LOG_WRN("header 100, %.2f, %.2f", (double)current_temperature, (double)current_temperature_setpoints[current_temperature_index]);
+            gpio_pin_set_dt(&heater, 1);
+        }
+        k_msleep(100);
     }
 
     return 0;
