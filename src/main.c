@@ -92,8 +92,8 @@ int main(void)
     LOG_INF("System initialized, starting main loop");
     uint8_t current_temperature_index     = 2;
     float temperature_offset              = 0.0f;                          // 温度偏移值
-    float base_temperature_setpoints[]    = {25.3f, 30.3f, 37.3f, 45.3f};  // 温度设置数组
-    float current_temperature_setpoints[] = {25.3f, 30.3f, 37.3f, 45.3f};
+    float base_temperature_setpoints[]    = {25.0f, 30.0f, 36.3f, 45.0f};  // 温度设置数组
+    float current_temperature_setpoints[] = {25.0f, 30.0f, 36.3f, 45.0f};
 
     // 初始化 PID 控制器
     // Kp=0.8, Ki=0.05, Kd=0.3, 输出范围 0-1
@@ -133,9 +133,9 @@ int main(void)
             gpio_pin_set_dt(&heater, 0);
             led_set_state(3, 0);
         }
-      
-        // 计算输出温度（添加固定的 -4 偏移，对应 fugaijin.c 的 temp - 4）
-        display_temperature = current_temperature - 0.4f + temperature_offset;
+ 
+        // 计算输出温度
+        display_temperature = current_temperature + temperature_offset;
 
         // 显示温度
         display_temp(display_temperature);

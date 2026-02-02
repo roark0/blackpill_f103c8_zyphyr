@@ -233,6 +233,25 @@ static unsigned char crc8(unsigned char *data, unsigned char len)
     return crc;
 }
 
+// 简单的冒泡排序
+static void bubble_sort(float *arr, int n)
+{
+    int i, j;
+    float temp;
+    for (i = 0; i < n - 1; i++)
+    {
+        for (j = 0; j < n - i - 1; j++)
+        {
+            if (arr[j] > arr[j + 1])
+            {
+                temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+}
+
 // 公共接口：读取温度
 float ds18b20_read_temperature(void)
 {
@@ -244,7 +263,11 @@ float ds18b20_read_temperature(void)
     static float last_valid_temp = 25.0f;  // 保存上一次有效温度
     static bool first_read = true;  // 首次读取标志
 
-    while (retry_count < max_retries)
+    float temp_readings[10];  // 存储10次温度读取值
+    int valid_readings = 0;   // 有效读取次数
+
+    // 读取10次温度
+    while (valid_readings < 10 && retry_count < max_retries)
     {
         if (init_ds18b20() != 0)
         {
@@ -316,17 +339,59 @@ float ds18b20_read_temperature(void)
                 continue;
             }
         }
-        else
-        {
-            first_read = false;  // 标记首次读取完成
-        }
 
-        // 温度有效，更新缓存
-        last_valid_temp = temp_mid;
-        return temp_mid;
+        // 保存有效温度值
+        temp_readings[valid_readings] = temp_mid;
+        valid_readings++;
     }
 
-    // 所有重试失败，返回上一次有效温度
-    LOG_ERR("DS18B20 read failed after %d attempts, using last valid temp", max_retries);
+    // 检查是否读取到足够的有效值
+    if (valid_readings < 4)
+    {
+        LOG_ERR("DS18B20 not enough valid readings: %d, using last valid temp", valid_readings);
+        return last_valid_temp;
+    }
+
+    // 更新首次读取标志
+    if (first_read)
+    {
+        first_read = false;
+    }
+    
+    // 如果读取次数不足10次，只取实际读取的数量
+    int readings_to_sort = valid_readings;
+    int readings_to_keep = readings_to_sort - 4;  // 去掉2个最大和2个最小
+
+    // 如果有效读取数不足6个，无法去掉4个值，返回全部的平均值
+    if (readings_to_keep < 2)
+    {
+        readings_to_keep = readings_to_sort;
+    }
+
+    // 排序温度值
+    bubble_sort(temp_readings, readings_to_sort);
+
+    // 计算中间值的平均值（去掉最大2个和最小2个）
+    float sum = 0.0f;
+    int start_index = 2;
+    int end_index = readings_to_sort - 2;
+
+    // 确保索引有效
+    if (end_index > start_index)
+    {
+        for (int i = start_index; i < end_index; i++)
+        {
+            sum += temp_readings[i];
+        }
+
+        last_valid_temp = sum / (end_index - start_index);
+        LOG_DBG("DS18B20 final average: %.2f", (double)last_valid_temp);
+    }
+    else
+    {
+        last_valid_temp = sum / readings_to_sort;
+        LOG_DBG("DS18B20 final average: %.2f", (double)last_valid_temp);
+    }
+
     return last_valid_temp;
 }
