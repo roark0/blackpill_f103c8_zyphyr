@@ -49,6 +49,9 @@ typedef struct {
     QTimeEvt timeEvtTemp;   /* 温度采样定时器 */
     QTimeEvt timeEvtDisp;   /* 显示刷新定时器 */
 
+    /* 新增：加热控制定时器 (100ms周期) */
+    QTimeEvt timeEvtHeat;   /* 加热控制定时器 */
+
     /* 温度采样工作队列（用于异步执行 DS18B20 读取） */
     struct k_work temp_work;
     struct k_work_q temp_work_q;
@@ -69,6 +72,11 @@ typedef struct {
 
     /* 统计数据 */
     uint32_t sample_count;
+
+    /* 加热控制相关变量 */
+    float pid_output;       /* 最新的PID输出值 */
+    uint8_t heat_cycle_pos; /* 当前加热周期位置 (0-9) */
+    uint8_t heat_on_count;  /* 当前周期内加热的次数 */
 
 } TempCtrl;
 

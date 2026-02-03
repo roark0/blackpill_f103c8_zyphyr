@@ -36,6 +36,7 @@ enum AppSignals {
     TEMP_TIMEOUT_SIG,                   /* 温度采样定时器超时 */
     DISPLAY_TIMEOUT_SIG,                /* 显示刷新定时器超时 */
     BUTTON_PRESSED_SIG,                 /* 按键按下信号 */
+    HEAT_CONTROL_SIG,                   /* 加热控制信号 */
 
     MAX_SIG
 };
