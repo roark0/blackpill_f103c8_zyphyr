@@ -17,6 +17,9 @@
 /* Temperature Control Active Object */
 #include "temperature_control.h"
 
+/* Temperature Sampling Active Object */
+#include "temperature_sampling.h"
+
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 // GPIO 设备节点
@@ -33,8 +36,8 @@ int main(void)
     LOG_INF("QPC framework initialized");
 
     /* 初始化事件池 */
-    static QF_MPOOL_EL(QEvt) eventPoolSto[32];
-    QF_poolInit(eventPoolSto, sizeof(eventPoolSto), sizeof(QEvt));
+    static QF_MPOOL_EL(QEvt) eventPoolSto[32];  /* 增加事件池大小以避免内存不足 */
+    QF_poolInit(eventPoolSto, sizeof(eventPoolSto), sizeof(TemperatureUpdateEvt));
     LOG_INF("QPC event pool initialized (32 events)");
 
     /* 初始化发布订阅 */
@@ -103,6 +106,10 @@ int main(void)
         return ret;
     }
     LOG_INF("Display initialized successfully");
+
+    /* 初始化温度采样 Active Object */
+    LOG_INF("Initializing Temperature Sampling AO...");
+    TempSampler_ctor();
 
     /* 初始化温度控制 Active Object */
     LOG_INF("Initializing Temperature Control AO...");

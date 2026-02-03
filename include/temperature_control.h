@@ -18,10 +18,6 @@ extern "C"
 /* 温度设定值档位 */
 #define TEMP_SETPOINT_COUNT 4
 
-/* 温度采样工作队列配置 */
-#define TEMP_WORK_STACK_SIZE 1024
-#define TEMP_WORK_PRIORITY K_LOWEST_APPLICATION_THREAD_PRIO
-
 /* Active Object 配置 */
 #define TEMPCTRL_AO_STACK_SIZE 2048
 #define TEMPCTRL_AO_PRIORITY 8
@@ -46,15 +42,10 @@ typedef struct {
     QActive super;
 
     /* 定时器 */
-    QTimeEvt timeEvtTemp;   /* 温度采样定时器 */
     QTimeEvt timeEvtDisp;   /* 显示刷新定时器 */
 
     /* 新增：加热控制定时器 (100ms周期) */
     QTimeEvt timeEvtHeat;   /* 加热控制定时器 */
-
-    /* 温度采样工作队列（用于异步执行 DS18B20 读取） */
-    struct k_work temp_work;
-    struct k_work_q temp_work_q;
 
     /* 温度数据 */
     float current_temp;

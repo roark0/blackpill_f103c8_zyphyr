@@ -229,15 +229,13 @@ static unsigned char crc8(unsigned char *data, unsigned char len)
 }
 
 // 公共接口：读取温度
-float ds18b20_read_temperature(float temp_offset)
+float ds18b20_read_temperature(void)
 {
     unsigned int tt;
     float temp_mid;
     unsigned char ramvalue[9];
     int retry_count = 0;
     const int max_retries = 1;
-    static float last_valid_temp = 25.0f;  // 保存上一次有效温度
-    static bool first_read = true;  // 首次读取标志
 
     // 单次读取温度
     while (retry_count < max_retries)
@@ -298,31 +296,10 @@ float ds18b20_read_temperature(float temp_offset)
             continue;
         }
 
-        // 温度变化合理性检查（单次变化不应超过 2°C）
-        // 首次读取时跳过检查，避免初始值偏差导致的误报
-        if (!first_read)
-        {
-            float temp_change = temp_mid - last_valid_temp;
-            if (temp_change > 2.0f || temp_change < -2.0f)
-            {
-                LOG_WRN("DS18B20 temperature jump detected: %.2f -> %.2f (change: %.2f)",
-                        (double)last_valid_temp, (double)temp_mid, (double)temp_change);
-                retry_count++;
-                k_msleep(10);
-                continue;
-            }
-        }
-        else
-        {
-            first_read = false;  // 标记首次读取完成
-        }
-
-        // 温度有效，更新缓存
-        last_valid_temp = temp_mid;
-        return last_valid_temp + temp_offset;
+        return temp_mid;
     }
 
-    // 所有重试失败，返回上一次有效温度
-    LOG_ERR("DS18B20 read failed after %d attempts, using last valid temp", max_retries);
-    return last_valid_temp + temp_offset;
+    // 所有重试失败，返回一个错误值
+    LOG_ERR("DS18B20 read failed after %d attempts", max_retries);
+    return -999.0f;
 }

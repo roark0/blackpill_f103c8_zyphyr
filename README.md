@@ -56,10 +56,8 @@
 
 ```bash
 # 初始化构建
-west build -b <board_name>
-
-# 烧录固件
-west flash
+source ~/zephyrproject/.venv/bin/activate && source ~/zephyrproject/zephyr/zephyr-env.sh
+west build -b stm32_min_dev -p auto
 ```
 
 ## 信号说明
