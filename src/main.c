@@ -1,4 +1,3 @@
-#include "zephyr/sys/printk.h"
 #include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
@@ -99,13 +98,14 @@ int main(void)
     // Kp=0.8, Ki=0.05, Kd=0.3, 输出范围 0-1
     // 降低 Kp 防止温度过载，增加 Ki 提高稳态精度
     pid_controller_t pid;
-    pid_init(&pid, 0.9f, 0.05f, 0.3f, temp_setpoints[temp_idx], 0.0f, 1.0f);
+    pid_init(&pid, 1.0f, 0.05f, 0.3f, temp_setpoints[temp_idx], 0.0f, 1.0f);
 
     // 主循环
     while (1)
     {
         // 读取开关设置并直接应用校准（包含 SET_S 方向控制）
         temp_offset = switch_read_settings();  //  + 1.0f
+        LOG_DBG("temp_offset=%.3f", temp_offset);
         temp = ds18b20_read_temperature(temp_offset);
         LOG_INF("temp=%.2f, %.2f", (double)temp, (double)temp_offset);
 
@@ -118,7 +118,7 @@ int main(void)
         float pid_output = pid_compute(&pid, temp);
 
         // PID 输出 > 0.3 时开启加热器（阈值可调）
-        if (pid_output > 0.4f && temp > 0.0f)
+        if (pid_output > 0.15f && temp > 0.0f)
         {
             gpio_pin_set_dt(&heater, 1);
             LOG_WRN("heater");
@@ -130,7 +130,7 @@ int main(void)
         }
 
 #define TARGET_TIMES 0
-#define LAST_TIMES 5
+#define LAST_TIMES 10
 
         disp_temp      = (last_disp_temp * LAST_TIMES + temp + setpoint * TARGET_TIMES) / (TARGET_TIMES + LAST_TIMES + 1);
         last_disp_temp = disp_temp;
@@ -160,14 +160,14 @@ int main(void)
             pid_set_setpoint(&pid, setpoint);
         }
 
-        k_msleep(500);  // 主循环延时
+        k_msleep(300);  // 主循环延时
         gpio_pin_set_dt(&heater, 0);
         if (setpoint - temp > 3)
         {
             LOG_WRN("header 100, %.2f, %.2f", (double)temp, (double)setpoint);
             gpio_pin_set_dt(&heater, 1);
         }
-        k_msleep(500);
+        k_msleep(700);
     }
 
     return 0;

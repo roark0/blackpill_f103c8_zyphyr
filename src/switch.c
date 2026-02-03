@@ -84,16 +84,16 @@ float switch_read_settings(void)
     // SW5 -> bit 1 (值 4)
     // SW3 -> bit 2 (值 8)
 
-    // 读取 SW3, SW5, SW7 状态 (注意：上拉电阻，按下时为低电平)
-    if (!gpio_pin_get_dt(&switches[3]))  // SW3
+    // 读取 SW3, SW5, SW7 状态
+    if (gpio_pin_get_dt(&switches[3]))  // SW3
     {
         value |= 0x01;  // bit 0
     }
-    if (!gpio_pin_get_dt(&switches[2]))  // SW5
+    if (gpio_pin_get_dt(&switches[2]))  // SW5
     {
         value |= 0x02;  // bit 1
     }
-    if (!gpio_pin_get_dt(&switches[1]))  // SW7
+    if (gpio_pin_get_dt(&switches[1]))  // SW7
     {
         value |= 0x04;  // bit 2
     }
@@ -105,7 +105,7 @@ float switch_read_settings(void)
     int set_s_state = gpio_pin_get_dt(&switches[0]);  // SW1
 
     // 根据 SET_S 方向返回带符号的偏移值
-    if (set_s_state == 1)  // SW1 没按下 (高电平)
+    if (set_s_state == 0)  // SW1 没按下 (高电平)
     {
         return -set_num;  // 减法方向
     }
