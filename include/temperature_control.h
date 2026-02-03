@@ -22,6 +22,10 @@ extern "C"
 #define TEMP_WORK_STACK_SIZE 1024
 #define TEMP_WORK_PRIORITY K_LOWEST_APPLICATION_THREAD_PRIO
 
+/* Active Object 配置 */
+#define TEMPCTRL_AO_STACK_SIZE 2048
+#define TEMPCTRL_AO_PRIORITY 8
+
 /* 设定值改变事件 */
 typedef struct {
     QEvt super;

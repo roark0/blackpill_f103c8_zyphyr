@@ -18,11 +18,17 @@ LOG_MODULE_REGISTER(tempctrl, LOG_LEVEL_INF);
 #define HEATER_NODE DT_ALIAS(heater)
 static const struct gpio_dt_spec heater = GPIO_DT_SPEC_GET(HEATER_NODE, gpios);
 
-/* 温度控制 AO 实例 */
-static TempCtrl l_tempCtrl;
+/* 温度控制 AO 实例（导出供其他模块使用） */
+TempCtrl l_tempCtrl;
 
 /* 温度采样工作队列栈 */
 static K_THREAD_STACK_DEFINE(temp_work_stack, TEMP_WORK_STACK_SIZE);
+
+/* Active Object 线程栈 */
+K_THREAD_STACK_DEFINE(tempctrl_ao_stack, TEMPCTRL_AO_STACK_SIZE);
+
+/* Active Object 事件队列（50个事件） */
+static QEvtPtr tempctrlQueueSto[50];
 
 /* AO 状态转换声明 */
 QState TempCtrl_initial(TempCtrl * const me, QEvt const * const e);
@@ -33,7 +39,7 @@ static void temp_work_handler(struct k_work *work);
 
 /* 定时器间隔 */
 #define TEMP_SAMPLE_INTERVAL_MS  1000    /* 温度采样间隔 1秒 */
-#define DISPLAY_REFRESH_INTERVAL_MS 300  /* 显示刷新间隔 300ms */
+#define DISPLAY_REFRESH_INTERVAL_MS 1000  /* 显示刷新间隔 1秒 */
 
 /* 显示滤波参数 */
 #define DISPLAY_TARGET_TIMES 0
@@ -67,7 +73,7 @@ static void temp_work_handler(struct k_work *work)
         /* 温度读取失败 */
         LOG_ERR("Temperature read failed after %lld ms", elapsed);
     } else {
-        LOG_INF("Sample #%u: temp=%.2f°C, setpoint=%.2f°C, took %lld ms",
+        LOG_INF("Sample #%u: temp=%.2f degC, setpoint=%.2f degC, took %lld ms",
                 (unsigned int)me->sample_count,
                 (double)me->current_temp,
                 (double)me->pid_params.setpoint,
@@ -97,17 +103,23 @@ static void temp_work_handler(struct k_work *work)
 /* 温度控制 AO 构造函数 */
 void TempCtrl_ctor(void) {
     TempCtrl *me = &l_tempCtrl;
+    LOG_INF("TempCtrl_ctor: Starting");
 
     /* 初始化温度采样工作队列 */
+    LOG_DBG("TempCtrl_ctor: Initializing work queue");
     k_work_queue_init(&me->temp_work_q);
     k_work_queue_start(&me->temp_work_q, temp_work_stack,
                        K_THREAD_STACK_SIZEOF(temp_work_stack),
                        TEMP_WORK_PRIORITY, NULL);
-    k_work_init(&me->temp_work, temp_work_handler);
+    LOG_DBG("TempCtrl_ctor: Work queue started");
 
+    k_work_init(&me->temp_work, temp_work_handler);
+    LOG_DBG("TempCtrl_ctor: Work item initialized");
+
+    LOG_DBG("TempCtrl_ctor: Constructing QActive");
     QActive_ctor(&me->super, Q_STATE_CAST(&TempCtrl_initial));
 
-    /* 初始化定时器 */
+    /* 构造时间事件 */
     QTimeEvt_ctorX(&me->timeEvtTemp, &me->super, TEMP_TIMEOUT_SIG, 0U);
     QTimeEvt_ctorX(&me->timeEvtDisp, &me->super, DISPLAY_TIMEOUT_SIG, 0U);
 
@@ -141,22 +153,35 @@ void TempCtrl_ctor(void) {
              me->pid_params.setpoint,
              me->pid_params.output_min,
              me->pid_params.output_max);
+
+    /* 启动活动对象 */
+    LOG_DBG("TempCtrl_ctor: Starting Active Object");
+    QActive_start(&me->super,
+                  Q_PRIO(TEMPCTRL_AO_PRIORITY, 0U),
+                  tempctrlQueueSto,
+                  Q_DIM(tempctrlQueueSto),
+                  (uint8_t *)tempctrl_ao_stack,
+                  sizeof(tempctrl_ao_stack),
+                  (void *)0);
+    LOG_INF("TempCtrl_ctor: Active Object started");
 }
 
 /* 初始状态 */
 QState TempCtrl_initial(TempCtrl * const me, QEvt const * const e) {
     (void)e;
+    LOG_INF("TempCtrl_initial: Entering initial state");
 
-    LOG_INF("Temperature Control AO initialized");
-
+    LOG_INF("TempCtrl_initial: Starting temperature sampling timer");
     /* 启动温度采样定时器 */
     QTimeEvt_armX(&me->timeEvtTemp, MS2QPC(TEMP_SAMPLE_INTERVAL_MS),
                   MS2QPC(TEMP_SAMPLE_INTERVAL_MS));
 
+    LOG_INF("TempCtrl_initial: Starting display refresh timer");
     /* 启动显示刷新定时器 */
     QTimeEvt_armX(&me->timeEvtDisp, MS2QPC(DISPLAY_REFRESH_INTERVAL_MS),
                   MS2QPC(DISPLAY_REFRESH_INTERVAL_MS));
 
+    LOG_INF("TempCtrl_initial: Transitioning to running state");
     return Q_TRAN(&TempCtrl_running);
 }
 
@@ -178,7 +203,7 @@ QState TempCtrl_running(TempCtrl * const me, QEvt const * const e) {
 
     case TEMP_TIMEOUT_SIG: {
         /* 温度采样定时器超时 - 提交工作到工作队列异步执行 */
-        LOG_DBG("Temperature timeout, submitting work to queue");
+        LOG_INF("Temperature timeout, submitting work to queue");
         k_work_submit_to_queue(&l_tempCtrl.temp_work_q, &l_tempCtrl.temp_work);
         status = Q_HANDLED();
         break;
@@ -187,7 +212,7 @@ QState TempCtrl_running(TempCtrl * const me, QEvt const * const e) {
     case DISPLAY_TIMEOUT_SIG: {
         /* 显示刷新定时器超时 */
         display_temp(me->display_temp);
-        LOG_DBG("Display updated: %.2f°C", (double)me->display_temp);
+        LOG_DBG("Display updated: %.2f degC", (double)me->display_temp);
         status = Q_HANDLED();
         break;
     }
@@ -210,7 +235,7 @@ QState TempCtrl_running(TempCtrl * const me, QEvt const * const e) {
         pid_reset(&me->pid);
         pid_set_setpoint(&me->pid, me->pid_params.setpoint);
 
-        LOG_INF("Setpoint changed to %.2f°C (index=%u)",
+        LOG_INF("Setpoint changed to %.2f degC (index=%u)",
                 (double)me->pid_params.setpoint,
                 (unsigned int)me->current_setpoint_idx);
 
@@ -229,7 +254,7 @@ QState TempCtrl_running(TempCtrl * const me, QEvt const * const e) {
             pid_reset(&me->pid);
             pid_set_setpoint(&me->pid, me->pid_params.setpoint);
 
-            LOG_INF("Setpoint changed to %.2f°C (index=%u)",
+            LOG_INF("Setpoint changed to %.2f degC (index=%u)",
                     (double)me->pid_params.setpoint,
                     (unsigned int)me->current_setpoint_idx);
         }

@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
@@ -12,11 +11,8 @@
 #include "led.h"
 #include "switch.h"
 #include "display.h"
-#include "pid.h"
 
-/* QPC Framework */
-#include "qpc.h"
-#include "bsp.h"
+#include "qp.h"
 
 /* Temperature Control Active Object */
 #include "temperature_control.h"
@@ -76,7 +72,7 @@ int main(void)
     if (ds18b20_init() != 0)
     {
         LOG_ERR("Failed to initialize DS18B20");
-        return -1;
+        // return -1;
     }
 
     // 初始化加热器 GPIO
@@ -99,12 +95,14 @@ int main(void)
     gpio_pin_set_dt(&heater, 0);
 
     // 初始化数码管
+    LOG_INF("Initializing display...");
     ret = display_init();
     if (ret != 0)
     {
         LOG_ERR("Failed to initialize display");
         return ret;
     }
+    LOG_INF("Display initialized successfully");
 
     /* 初始化温度控制 Active Object */
     LOG_INF("Initializing Temperature Control AO...");

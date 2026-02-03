@@ -5,6 +5,11 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
+/* QPC Framework */
+#include "qpc.h"
+#include "bsp.h"
+#include "temperature_control.h"
+
 LOG_MODULE_REGISTER(switch, LOG_LEVEL_INF);
 
 // GPIO 设备结构
@@ -24,14 +29,27 @@ static struct k_work button_work;
 // 按键工作队列处理函数
 static void button_work_handler(struct k_work *work)
 {
-    LOG_INF("button_work_handler");
+    LOG_DBG("button_work_handler: checking button state");
     // 延时消抖
     k_sleep(K_MSEC(20));
     // 检查按键状态
     int pin_state = gpio_pin_get_dt(&mode_btn);
     if (pin_state == 0)  // 按键仍然按下（低电平）
     {
+        LOG_INF("Button pressed, sending BUTTON_PRESSED_SIG to TempCtrl AO");
         button_pressed = true;  // 确认按键按下
+
+        /* 创建按键按下事件并发送给 Temperature Control AO */
+        QEvt *evt = Q_NEW(QEvt, BUTTON_PRESSED_SIG);
+        if (evt != NULL) {
+            /* 获取 TempCtrl AO 实例（需要从 temperature_control.c 导出） */
+            extern TempCtrl l_tempCtrl;
+            QACTIVE_POST(&l_tempCtrl.super, evt, 0U);
+        } else {
+            LOG_ERR("Failed to allocate BUTTON_PRESSED_SIG event");
+        }
+    } else {
+        LOG_DBG("Button released (debounce)");
     }
 }
 

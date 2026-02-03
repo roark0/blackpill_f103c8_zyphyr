@@ -6,8 +6,6 @@
 #ifndef QP_CONFIG_H
 #define QP_CONFIG_H
 
-/* QPC Framework Configuration - 参考官方 blinky 示例 */
-#define QF_MAX_ACTIVE CONFIG_NUM_PREEMPT_PRIORITIES  /* Maximum # Active Objects */
 #define QF_MAX_EPOOL 3U                                 /* Maximum # Event Pools */
 #define QF_MAX_TICK_RATE 1U                             /* Maximum # clock tick rates */
 #define QF_EVENT_SIZ_SIZE 2U                            /* Size of dynamic events */
