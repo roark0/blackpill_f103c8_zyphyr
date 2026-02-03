@@ -21,9 +21,15 @@ static const struct gpio_dt_spec heater = GPIO_DT_SPEC_GET(HEATER_NODE, gpios);
 /* 温度控制 AO 实例 */
 static TempCtrl l_tempCtrl;
 
+/* 温度采样工作队列栈 */
+static K_THREAD_STACK_DEFINE(temp_work_stack, TEMP_WORK_STACK_SIZE);
+
 /* AO 状态转换声明 */
 QState TempCtrl_initial(TempCtrl * const me, QEvt const * const e);
 QState TempCtrl_running(TempCtrl * const me, QEvt const * const e);
+
+/* 前向声明 */
+static void temp_work_handler(struct k_work *work);
 
 /* 定时器间隔 */
 #define TEMP_SAMPLE_INTERVAL_MS  1000    /* 温度采样间隔 1秒 */
@@ -36,9 +42,69 @@ QState TempCtrl_running(TempCtrl * const me, QEvt const * const e);
 /* 加热器输出阈值 */
 #define HEATER_OUTPUT_THRESHOLD 0.15f
 
+/**
+ * @brief 温度采样工作函数（在工作队列中异步执行）
+ */
+static void temp_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    TempCtrl *me = &l_tempCtrl;
+
+    LOG_DBG("Temperature sampling work handler started");
+
+    /* 读取温度偏移（来自开关设置） */
+    me->temp_offset = switch_read_settings();
+    LOG_DBG("temp_offset=%.3f", (double)me->temp_offset);
+
+    /* 异步读取 DS18B20 温度（耗时操作） */
+    int64_t start = k_uptime_get();
+    me->current_temp = ds18b20_read_temperature(me->temp_offset);
+    int64_t elapsed = k_uptime_get() - start;
+
+    me->sample_count++;
+
+    if (me->current_temp < -100.0f) {
+        /* 温度读取失败 */
+        LOG_ERR("Temperature read failed after %lld ms", elapsed);
+    } else {
+        LOG_INF("Sample #%u: temp=%.2f°C, setpoint=%.2f°C, took %lld ms",
+                (unsigned int)me->sample_count,
+                (double)me->current_temp,
+                (double)me->pid_params.setpoint,
+                elapsed);
+    }
+
+    /* 更新 PID 控制器 */
+    pid_set_setpoint(&me->pid, me->pid_params.setpoint);
+    float pid_output = pid_compute(&me->pid, me->current_temp);
+
+    /* PID 输出控制加热器 */
+    if (pid_output > HEATER_OUTPUT_THRESHOLD && me->current_temp > 0.0f) {
+        gpio_pin_set_dt(&heater, 1);
+        LOG_DBG("Heater ON, pid_output=%.3f", (double)pid_output);
+    } else {
+        gpio_pin_set_dt(&heater, 0);
+    }
+
+    /* 计算显示温度（滤波） */
+    me->display_temp = (me->last_display_temp * DISPLAY_LAST_TIMES +
+                        me->current_temp +
+                        me->pid_params.setpoint * DISPLAY_TARGET_TIMES) /
+                       (DISPLAY_TARGET_TIMES + DISPLAY_LAST_TIMES + 1);
+    me->last_display_temp = me->display_temp;
+}
+
 /* 温度控制 AO 构造函数 */
 void TempCtrl_ctor(void) {
     TempCtrl *me = &l_tempCtrl;
+
+    /* 初始化温度采样工作队列 */
+    k_work_queue_init(&me->temp_work_q);
+    k_work_queue_start(&me->temp_work_q, temp_work_stack,
+                       K_THREAD_STACK_SIZEOF(temp_work_stack),
+                       TEMP_WORK_PRIORITY, NULL);
+    k_work_init(&me->temp_work, temp_work_handler);
+
     QActive_ctor(&me->super, Q_STATE_CAST(&TempCtrl_initial));
 
     /* 初始化定时器 */
@@ -111,39 +177,9 @@ QState TempCtrl_running(TempCtrl * const me, QEvt const * const e) {
     }
 
     case TEMP_TIMEOUT_SIG: {
-        /* 温度采样定时器超时 */
-        me->sample_count++;
-
-        /* 读取温度偏移（来自开关设置） */
-        me->temp_offset = switch_read_settings();
-        LOG_DBG("temp_offset=%.3f", (double)me->temp_offset);
-
-        /* 读取 DS18B20 温度 */
-        me->current_temp = ds18b20_read_temperature(me->temp_offset);
-        LOG_INF("Sample #%u: temp=%.2f°C, setpoint=%.2f°C",
-                (unsigned int)me->sample_count,
-                (double)me->current_temp,
-                (double)me->pid_params.setpoint);
-
-        /* 更新 PID 控制器 */
-        pid_set_setpoint(&me->pid, me->pid_params.setpoint);
-        float pid_output = pid_compute(&me->pid, me->current_temp);
-
-        /* PID 输出控制加热器 */
-        if (pid_output > HEATER_OUTPUT_THRESHOLD && me->current_temp > 0.0f) {
-            gpio_pin_set_dt(&heater, 1);
-            LOG_DBG("Heater ON, pid_output=%.3f", (double)pid_output);
-        } else {
-            gpio_pin_set_dt(&heater, 0);
-        }
-
-        /* 计算显示温度（滤波） */
-        me->display_temp = (me->last_display_temp * DISPLAY_LAST_TIMES +
-                            me->current_temp +
-                            me->pid_params.setpoint * DISPLAY_TARGET_TIMES) /
-                           (DISPLAY_TARGET_TIMES + DISPLAY_LAST_TIMES + 1);
-        me->last_display_temp = me->display_temp;
-
+        /* 温度采样定时器超时 - 提交工作到工作队列异步执行 */
+        LOG_DBG("Temperature timeout, submitting work to queue");
+        k_work_submit_to_queue(&l_tempCtrl.temp_work_q, &l_tempCtrl.temp_work);
         status = Q_HANDLED();
         break;
     }

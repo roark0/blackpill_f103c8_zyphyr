@@ -18,6 +18,10 @@ extern "C"
 /* 温度设定值档位 */
 #define TEMP_SETPOINT_COUNT 4
 
+/* 温度采样工作队列配置 */
+#define TEMP_WORK_STACK_SIZE 1024
+#define TEMP_WORK_PRIORITY K_LOWEST_APPLICATION_THREAD_PRIO
+
 /* 设定值改变事件 */
 typedef struct {
     QEvt super;
@@ -47,10 +51,15 @@ typedef struct {
     QTimeEvt timeEvtTemp;   /* 温度采样定时器 */
     QTimeEvt timeEvtDisp;   /* 显示刷新定时器 */
 
+    /* 温度采样工作队列（用于异步执行 DS18B20 读取） */
+    struct k_work temp_work;
+    struct k_work_q temp_work_q;
+
     /* 温度数据 */
     float current_temp;
     float display_temp;
     float last_display_temp;
+    float temp_offset;
 
     /* PID 控制器 */
     pid_controller_t pid;
@@ -59,7 +68,6 @@ typedef struct {
     /* 温度设定值 */
     float setpoints[TEMP_SETPOINT_COUNT];
     uint8_t current_setpoint_idx;
-    float temp_offset;
 
     /* 统计数据 */
     uint32_t sample_count;
