@@ -1,8 +1,6 @@
 #ifndef PID_H
 #define PID_H
 
-#include <stdint.h>
-
 /**
  * @brief PID 控制器结构体
  */

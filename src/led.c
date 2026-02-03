@@ -1,3 +1,10 @@
+/**
+ * @file led.c
+ * @brief LED 控制模块实现
+ * 
+ * 该文件实现了 LED 控制功能，包括初始化、单个控制、批量控制和模式控制。
+ */
+
 #include "led.h"
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
@@ -5,7 +12,7 @@
 
 LOG_MODULE_REGISTER(led, LOG_LEVEL_INF);
 
-// LED GPIO 设备定义
+//!< LED GPIO 设备定义
 static const struct gpio_dt_spec leds[LED_COUNT] = {
     GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios),
     GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios),
@@ -13,7 +20,13 @@ static const struct gpio_dt_spec leds[LED_COUNT] = {
     GPIO_DT_SPEC_GET(DT_ALIAS(led3), gpios),
 };
 
-// LED 初始化函数
+/**
+ * @brief LED 初始化函数
+ * 
+ * 初始化所有 LED 引脚为输出模式，并将所有 LED 设置为熄灭状态。
+ * 
+ * @return int 成功返回 0，失败返回负值
+ */
 int led_init(void)
 {
     int ret;
@@ -47,7 +60,14 @@ int led_init(void)
     return 0;
 }
 
-// 设置单个 LED 状态
+/**
+ * @brief 设置单个 LED 状态
+ * 
+ * 设置指定索引的 LED 为指定状态（亮或灭）。
+ * 
+ * @param led_index LED 索引 (0-3)
+ * @param state LED 状态 (0=灭, 1=亮)
+ */
 void led_set_state(uint8_t led_index, int state)
 {
     if (led_index >= LED_COUNT)
@@ -59,7 +79,13 @@ void led_set_state(uint8_t led_index, int state)
     gpio_pin_set_dt(&leds[led_index], state);
 }
 
-// 设置所有 LED 状态
+/**
+ * @brief 设置所有 LED 状态
+ * 
+ * 将所有 LED 设置为相同的状态（全部亮或全部灭）。
+ * 
+ * @param state LED 状态 (0=全灭, 1=全亮)
+ */
 void led_set_all(int state)
 {
     for (int i = 0; i < LED_COUNT; i++)
@@ -68,7 +94,13 @@ void led_set_all(int state)
     }
 }
 
-// 只亮一个 LED，其他全部熄灭
+/**
+ * @brief 只亮一个 LED，其他全部熄灭
+ * 
+ * 点亮指定索引的 LED，同时熄灭其他所有 LED。
+ * 
+ * @param led_index 要点亮的 LED 索引 (0-3)
+ */
 void led_set_single(uint8_t led_index)
 {
     if (led_index >= LED_COUNT)
@@ -83,7 +115,13 @@ void led_set_single(uint8_t led_index)
     }
 }
 
-// 设置 LED 模式（使用位掩码）
+/**
+ * @brief 设置 LED 模式（使用位掩码）
+ * 
+ * 根据位掩码设置 LED 的状态，每一位对应一个 LED。
+ * 
+ * @param pattern 位掩码模式，每一位表示对应 LED 的状态
+ */
 void led_set_pattern(uint8_t pattern)
 {
     for (int i = 0; i < LED_COUNT; i++)

@@ -1,3 +1,11 @@
+/**
+ * @file ds18b20.c
+ * @brief DS18B20 1-Wire 数字温度传感器驱动实现
+ * 
+ * 该文件实现了对 DS18B20 温度传感器的驱动，包括初始化、温度读取、
+ * 设备诊断等功能。使用 Zephyr RTOS 的 GPIO 接口与传感器通信。
+ */
+
 #include "ds18b20.h"
 #include <zephyr/sys/printk.h>
 #include <zephyr/kernel.h>
@@ -8,11 +16,14 @@
 
 LOG_MODULE_REGISTER(ds18b20, LOG_LEVEL_INF);
 
-// DQ GPIO 设备节点
+//!< DQ GPIO 设备节点
 #define DQ_NODE DT_ALIAS(dq)
 static const struct gpio_dt_spec dq = GPIO_DT_SPEC_GET(DQ_NODE, gpios);
 
-// 延时函数
+/**
+ * @brief 微秒级延时函数
+ * @param us 延时时间（微秒）
+ */
 static void delay_us(unsigned int us)
 {
     uint32_t start = TIM2->CNT;
@@ -21,7 +32,9 @@ static void delay_us(unsigned int us)
     }
 }
 
-// TIM2 定时器初始化
+/**
+ * @brief 初始化 TIM2 定时器用于微秒级延时
+ */
 static void tim2_init_us(void)
 {
     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
@@ -30,7 +43,12 @@ static void tim2_init_us(void)
     TIM2->CR1 = TIM_CR1_CEN;
 }
 
-// DS18B20连接诊断函数
+/**
+ * @brief DS18B20 连接诊断函数
+ * 
+ * 该函数用于诊断 DS18B20 传感器连接状态，检查 GPIO 设备是否就绪，
+ * 并确认 DQ 引脚是否被上拉。
+ */
 void ds18b20_diagnostic(void)
 {
     LOG_INF("=== DS18B20 Diagnostic ===");
@@ -58,7 +76,13 @@ void ds18b20_diagnostic(void)
     LOG_INF("=== End Diagnostic ===");
 }
 
-// 初始化 DS18B20
+/**
+ * @brief 初始化 DS18B20 传感器
+ * 
+ * 该函数执行 DS18B20 的复位和存在检测时序，确保传感器正常连接。
+ * 
+ * @return 0 表示成功，-1 表示失败
+ */
 static int init_ds18b20(void)
 {
     int x                 = 0;
@@ -118,7 +142,13 @@ static int init_ds18b20(void)
     return -1;
 }
 
-// 读取一个位
+/**
+ * @brief 从 DS18B20 读取一个位
+ * 
+ * 实现 1-Wire 协议中的位读取时序。
+ * 
+ * @return 读取到的位值 (0 或 1)
+ */
 static int tmpread_bit(void)
 {
     int dat;
@@ -147,7 +177,13 @@ static int tmpread_bit(void)
     return dat;
 }
 
-// 读取一个字节
+/**
+ * @brief 从 DS18B20 读取一个字节
+ * 
+ * 通过连续读取 8 个位来组成一个字节。
+ * 
+ * @return 读取到的字节值
+ */
 static unsigned char read_one_char(void)
 {
     unsigned char i, j, dat;
@@ -162,7 +198,13 @@ static unsigned char read_one_char(void)
     return dat;
 }
 
-// 写一个字节
+/**
+ * @brief 向 DS18B20 写入一个字节
+ * 
+ * 实现 1-Wire 协议中的字节写入时序。
+ * 
+ * @param dat 要写入的字节值
+ */
 static void write_one_char(unsigned char dat)
 {
     int testb;
@@ -189,7 +231,14 @@ static void write_one_char(unsigned char dat)
     }
 }
 
-// 公共接口：初始化 DS18B20
+/**
+ * @brief 初始化 DS18B20 传感器
+ * 
+ * 初始化用于与 DS18B20 通信的硬件资源（定时器和 GPIO），
+ * 并执行传感器的存在检测。
+ * 
+ * @return 0 表示成功，-1 表示失败
+ */
 int ds18b20_init(void)
 {
     tim2_init_us();
@@ -204,7 +253,15 @@ int ds18b20_init(void)
     return init_ds18b20();
 }
 
-// CRC 校验函数
+/**
+ * @brief 计算 CRC8 校验值
+ * 
+ * 使用 CRC8 算法计算数据校验值，用于验证 DS18B20 读取的数据完整性。
+ * 
+ * @param data 要校验的数据指针
+ * @param len 数据长度
+ * @return CRC8 校验值
+ */
 static unsigned char crc8(unsigned char *data, unsigned char len)
 {
     unsigned char crc = 0;
@@ -228,13 +285,20 @@ static unsigned char crc8(unsigned char *data, unsigned char len)
     return crc;
 }
 
-// 公共接口：读取温度
+/**
+ * @brief 读取 DS18B20 温度值
+ * 
+ * 从 DS18B20 传感器读取温度值。该函数执行完整的温度转换和读取时序，
+ * 包括复位、发送命令、启动转换、读取暂存器和 CRC 校验。
+ * 
+ * @return 温度值（摄氏度），如果读取失败则返回 -999.0f
+ */
 float ds18b20_read_temperature(void)
 {
     unsigned int tt;
     float temp_mid;
     unsigned char ramvalue[9];
-    int retry_count = 0;
+    int retry_count       = 0;
     const int max_retries = 1;
 
     // 单次读取温度

@@ -1,3 +1,12 @@
+/**
+ * @file main.c
+ * @brief Main application file for the Temperature Control System
+ * 
+ * This file contains the main entry point for the temperature control system.
+ * It initializes all hardware peripherals, QPC framework, and starts the
+ * Active Objects for temperature sampling and control.
+ */
+
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
@@ -14,19 +23,26 @@
 
 #include "qp.h"
 
-/* Temperature Control Active Object */
+//!< Temperature Control Active Object
 #include "temperature_control.h"
 
-/* Temperature Sampling Active Object */
+//!< Temperature Sampling Active Object
 #include "temperature_sampling.h"
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
-// GPIO 设备节点
+//!< GPIO 设备节点 - 加热器
 #define HEATER_NODE DT_ALIAS(heater)
 static const struct gpio_dt_spec heater = GPIO_DT_SPEC_GET(HEATER_NODE, gpios);
 
-// 主函数
+/**
+ * @brief Main application entry point
+ * 
+ * This function initializes all system components including QPC framework,
+ * hardware peripherals, and Active Objects. It then starts the QPC event loop.
+ * 
+ * @return int Application exit code (typically never returns in embedded systems)
+ */
 int main(void)
 {
     int ret;

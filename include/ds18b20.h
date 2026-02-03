@@ -1,8 +1,6 @@
 #ifndef DS18B20_H
 #define DS18B20_H
 
-#include <stdint.h>
-
 /**
  * @brief Initialize DS18B20 sensor
  * @return 0 on success, -1 on failure

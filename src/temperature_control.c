@@ -1,11 +1,14 @@
 /**
  * @file temperature_control.c
  * @brief Temperature Control Active Object implementation
+ * 
+ * This file implements the Temperature Control Active Object, which manages
+ * temperature control using PID algorithm, controls heating elements,
+ * and manages display updates based on temperature readings.
  */
 
 #include "temperature_control.h"
-#include "temperature_sampling.h"  /* 包含温度采样AO的头文件 */
-#include "ds18b20.h"
+#include "temperature_sampling.h"  //!< 包含温度采样AO的头文件
 #include "led.h"
 #include "display.h"
 #include "switch.h"
@@ -15,32 +18,39 @@
 
 LOG_MODULE_REGISTER(tempctrl, LOG_LEVEL_INF);
 
-/* GPIO 设备节点 */
+//!< GPIO 设备节点 - 加热器
 #define HEATER_NODE DT_ALIAS(heater)
 static const struct gpio_dt_spec heater = GPIO_DT_SPEC_GET(HEATER_NODE, gpios);
 
-/* 温度控制 AO 实例（导出供其他模块使用） */
+//!< 温度控制 AO 实例（导出供其他模块使用）
 TempCtrl l_tempCtrl;
 
-/* Active Object 线程栈 */
+//!< Active Object 线程栈
 K_THREAD_STACK_DEFINE(tempctrl_ao_stack, TEMPCTRL_AO_STACK_SIZE);
 
-/* Active Object 事件队列（50个事件） */
+//!< Active Object 事件队列（50个事件）
 static QEvtPtr tempctrlQueueSto[50];
 
 /* AO 状态转换声明 */
 QState TempCtrl_initial(TempCtrl *const me, QEvt const *const e);
 QState TempCtrl_running(TempCtrl *const me, QEvt const *const e);
 
-/* 定时器间隔 */
-#define DISPLAY_REFRESH_INTERVAL_MS 1000 /* 显示刷新间隔 1秒 */
-#define HEAT_CONTROL_INTERVAL_MS 100     /* 加热控制间隔 100ms (10个QPC tick) */
+//!< 显示刷新间隔（毫秒）
+#define DISPLAY_REFRESH_INTERVAL_MS 1000 
+//!< 加热控制间隔（毫秒）
+#define HEAT_CONTROL_INTERVAL_MS 100     
 
-/* 显示滤波参数 */
+//!< 显示滤波参数 - 目标值权重
 #define DISPLAY_TARGET_TIMES 0
+//!< 显示滤波参数 - 历史值权重
 #define DISPLAY_LAST_TIMES 0
 
-/* 温度控制 AO 构造函数 */
+/**
+ * @brief 温度控制 AO 构造函数
+ * 
+ * 初始化温度控制 Active Object，设置初始参数和启动 AO。
+ * 该函数会初始化 PID 控制器、设置初始设定值、启动定时器并订阅相关事件。
+ */
 void TempCtrl_ctor(void)
 {
     TempCtrl *me = &l_tempCtrl;
@@ -68,7 +78,6 @@ void TempCtrl_ctor(void)
     me->setpoints[3] = 45.0f;
 
     /* 初始化 PID 控制器参数 */
-
     me->pid_params.kp         = 10.0f; /* 提高比例系数，提供更强的响应以达到设定值 */
     me->pid_params.ki         = 0.0f;  /* 稍微增加积分系数，帮助消除稳态误差 */
     me->pid_params.kd         = 0.0f;  /* 保持适中的微分系数，抑制可能的振荡 */
@@ -95,7 +104,15 @@ void TempCtrl_ctor(void)
     LOG_INF("TempCtrl_ctor: Active Object started and subscribed to TEMP_UPDATE_SIG");
 }
 
-/* 初始状态 */
+/**
+ * @brief 温度控制 AO 初始状态
+ * 
+ * 定义温度控制 Active Object 的初始状态，启动相关的定时器并转换到运行状态。
+ * 
+ * @param me 指向温度控制 AO 实例的指针
+ * @param e 指向事件的指针
+ * @return QState 状态转换结果
+ */
 QState TempCtrl_initial(TempCtrl *const me, QEvt const *const e)
 {
     (void)e;
@@ -113,7 +130,16 @@ QState TempCtrl_initial(TempCtrl *const me, QEvt const *const e)
     return Q_TRAN(&TempCtrl_running);
 }
 
-/* 运行状态 */
+/**
+ * @brief 温度控制 AO 运行状态
+ * 
+ * 定义温度控制 Active Object 的运行状态，处理各种事件如温度更新、
+ * 显示刷新和按钮按下事件。
+ * 
+ * @param me 指向温度控制 AO 实例的指针
+ * @param e 指向事件的指针
+ * @return QState 状态转换结果
+ */
 QState TempCtrl_running(TempCtrl *const me, QEvt const *const e)
 {
     QState status;
