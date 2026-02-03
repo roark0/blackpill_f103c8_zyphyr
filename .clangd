@@ -3,11 +3,12 @@
 
 CompileFlags:
   Add:
-    - -I/opt/gcc-arm-none-eabi-14.3/arm-none-eabi/include
-    - -I/opt/gcc-arm-none-eabi-14.3/arm-none-eabi/include/c++/14.3.1
-    - -I/opt/gcc-arm-none-eabi-14.3/arm-none-eabi/include/c++/14.3.1/arm-none-eabi
-    - -I/opt/gcc-arm-none-eabi-14.3/arm-none-eabi/include/c++/14.3.1/backward
-    - -I/opt/gcc-arm-none-eabi-14.3/lib/gcc/arm-none-eabi/14.3.1/include
-    - -I/opt/gcc-arm-none-eabi-14.3/lib/gcc/arm-none-eabi/14.3.1/include-fixed
+    - -I/home/lordyung/zephyrproject/zephyr-sdk-0.16.8/arm-zephyr-eabi/arm-zephyr-eabi/include
+    - -I/home/lordyung/zephyrproject/zephyr-sdk-0.16.8/arm-zephyr-eabi/arm-zephyr-eabi/include/c++/12.2.0
+    - -I/home/lordyung/zephyrproject/zephyr-sdk-0.16.8/arm-zephyr-eabi/arm-zephyr-eabi/include/c++/12.2.0/arm-zephyr-eabi
+    - -I/home/lordyung/zephyrproject/zephyr-sdk-0.16.8/arm-zephyr-eabi/arm-zephyr-eabi/include/c++/12.2.0/backward
+    - -I/home/lordyung/zephyrproject/zephyr-sdk-0.16.8/arm-zephyr-eabi/arm-zephyr-eabi/sys-include
+    - -I/home/lordyung/zephyrproject/zephyr-sdk-0.16.8/arm-zephyr-eabi/lib/gcc/arm-zephyr-eabi/12.2.0/include
+    - -I/home/lordyung/zephyrproject/zephyr-sdk-0.16.8/arm-zephyr-eabi/lib/gcc/arm-zephyr-eabi/12.2.0/include-fixed
   Remove:
     - -Werror

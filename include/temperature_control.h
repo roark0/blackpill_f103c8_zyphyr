@@ -26,12 +26,6 @@ extern "C"
 #define TEMPCTRL_AO_STACK_SIZE 2048
 #define TEMPCTRL_AO_PRIORITY 8
 
-/* 设定值改变事件 */
-typedef struct {
-    QEvt super;
-    uint8_t setpoint_idx;
-} SetpointChangeEvent;
-
 /* 按键按下事件 */
 typedef struct {
     QEvt super;

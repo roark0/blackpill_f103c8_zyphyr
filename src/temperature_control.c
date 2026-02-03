@@ -243,24 +243,7 @@ QState TempCtrl_running(TempCtrl * const me, QEvt const * const e) {
         break;
     }
 
-    case SETPOINT_CHANGE_SIG: {
-        /* 设定值改变事件 */
-        SetpointChangeEvent *evt = (SetpointChangeEvent *)e;
-        if (evt->setpoint_idx < TEMP_SETPOINT_COUNT) {
-            me->current_setpoint_idx = evt->setpoint_idx;
-            me->pid_params.setpoint = me->setpoints[me->current_setpoint_idx];
 
-            led_set_single(me->current_setpoint_idx);
-            pid_reset(&me->pid);
-            pid_set_setpoint(&me->pid, me->pid_params.setpoint);
-
-            LOG_INF("Setpoint changed to %.2f degC (index=%u)",
-                    (double)me->pid_params.setpoint,
-                    (unsigned int)me->current_setpoint_idx);
-        }
-        status = Q_HANDLED();
-        break;
-    }
 
     default: {
         status = Q_SUPER(&QHsm_top);
