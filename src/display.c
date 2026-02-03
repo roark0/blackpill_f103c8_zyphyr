@@ -26,20 +26,6 @@ static const struct gpio_dt_spec decimal_segments[SEGMENT_COUNT] = {
     GPIO_DT_SPEC_GET(DT_NODELABEL(decimal_d), gpios),
 };
 
-// 数码管段码表 (0-9)
-static const unsigned char digit_segments[] = {
-    0x3F,  // 0
-    0x06,  // 1
-    0x5B,  // 2
-    0x4F,  // 3
-    0x66,  // 4
-    0x6D,  // 5
-    0x7D,  // 6
-    0x07,  // 7
-    0x7F,  // 8
-    0x6F   // 9
-};
-
 // 初始化数码管 GPIO
 int display_init(void)
 {
@@ -78,30 +64,6 @@ int display_init(void)
     }
 
     return 0;
-}
-
-// 设置数码管显示数字
-static void set_digit_display(const struct gpio_dt_spec *segments_array, unsigned char digit)
-{
-    // 参数检查，防止数组越界
-    if (digit > 9)
-    {
-        LOG_ERR("Digit out of range: %d", digit);
-        // 熄灭所有段
-        for (int i = 0; i < SEGMENT_COUNT; i++)
-        {
-            gpio_pin_set_dt(&segments_array[i], 0);
-        }
-        return;
-    }
-
-    unsigned char segments = digit_segments[digit];
-
-    // 设置段选 (使用数组循环设置段码的 4 位)
-    for (int i = 0; i < SEGMENT_COUNT; i++)
-    {
-        gpio_pin_set_dt(&segments_array[i], (segments & (1 << i)) ? 1 : 0);
-    }
 }
 
 // 显示温度（使用4段数码管，BCD编码）

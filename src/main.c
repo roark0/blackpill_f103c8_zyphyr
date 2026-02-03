@@ -105,7 +105,7 @@ int main(void)
     {
         // 读取开关设置并直接应用校准（包含 SET_S 方向控制）
         temp_offset = switch_read_settings();  //  + 1.0f
-        LOG_DBG("temp_offset=%.3f", temp_offset);
+        LOG_DBG("temp_offset=%.3f", (double)temp_offset);
         temp = ds18b20_read_temperature(temp_offset);
         LOG_INF("temp=%.2f, %.2f", (double)temp, (double)temp_offset);
 
